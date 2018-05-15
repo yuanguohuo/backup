@@ -1,0 +1,169 @@
+--- Default values for configuration options.
+-- For project specific configuration create '.luacov' file in your project
+-- folder. It should be a Lua script setting various options as globals
+-- or returning table of options.
+-- @class module
+-- @name luacov.defaults
+return {
+
+  --- Filename to store collected stats. Default: "luacov.stats.out".
+  --- same as .luaconv dir 
+ 
+  --statsfile = "luacov.stats.out", -- maybe not pessiom,lead D hang.
+  statsfile = "/usr/local/stor-openresty/nginx/covstats",
+
+
+  --- Filename to store report. Default: "luacov.report.out".
+  reportfile = "luacov.report.out",
+
+  --- Enable saving coverage data after every `savestepsize` lines?
+  -- Setting this flag to `true` in config is equivalent to running LuaCov
+  -- using `luacov.tick` module. Default: false.
+  tick = true,
+
+  --- Stats file updating frequency for `luacov.tick`.
+  -- The lower this value - the more frequently results will be written out to the stats file.
+  -- You may want to reduce this value (to, for example, 2) to avoid losing coverage data in
+  -- case your program may terminate without triggering luacov exit hooks that are supposed
+  -- to save the data. Default: 100.
+  savestepsize = 3, -- for high workload,need increace it
+
+  --- Run reporter on completion? Default: false.
+  runreport = false,
+
+  --- Delete stats file after reporting? Default: false.
+  deletestats = true,
+  
+  --- Process Lua code loaded from raw strings?
+  -- That is, when the 'source' field in the debug info
+  -- does not start with '@'. Default: false.
+  codefromstrings = false,
+
+  --- Lua patterns for files to include when reporting.
+  -- All will be included if nothing is listed.
+  -- Do not include the '.lua' extension. Path separator is always '/'.
+  -- Overruled by `exclude`.
+  include = {},
+
+  --- Lua patterns for files to exclude when reporting.
+  -- Nothing will be excluded if nothing is listed.
+  -- Do not include the '.lua' extension. Path separator is always '/'.
+  -- Overrules `include`.
+  exclude = {
+"/usr/local/stor-openresty/nginx//proxy/admin/admin_service$",
+"/usr/local/stor-openresty/nginx//proxy/thirdparty/inspect$",
+"/usr/local/stor-openresty/nginx//proxy/thirdparty/librados$",
+"/usr/local/stor-openresty/nginx//proxy/thirdparty/LuaXml$",
+"/usr/local/stor-openresty/nginx//proxy/thirdparty/sha1$",
+"/usr/local/stor-openresty/nginx//proxy/thirdparty/xmlSimple$",
+"/usr/local/stor-openresty/nginx//proxy/thirdparty/hash/hash$",
+"/usr/local/stor-openresty/nginx//proxy/thirdparty/LuaXML_101012/LuaXml$",
+"/usr/local/stor-openresty/nginx//proxy/thirdparty/LuaXML_101012/test$",
+"/usr/local/stor-openresty/nginx//proxy/thirdparty/resty/hash$",
+"/usr/local/stor-openresty/nginx//proxy/thirdparty/resty/http_headers$",
+"/usr/local/stor-openresty/nginx//proxy/thirdparty/resty/http$",
+"/usr/local/stor-openresty/nginx//proxy/thirdparty/resty/jit-uuid$",
+"/usr/local/stor-openresty/nginx//proxy/thirdparty/resty/tablepool$",
+"/usr/local/stor-openresty/nginx//proxy/thirdparty/resty/uuid$",
+"/usr/local/stor-openresty/nginx//proxy/thirdparty/api-gateway/cache/cache$",
+"/usr/local/stor-openresty/nginx//proxy/thirdparty/api-gateway/cache/store$",
+"/usr/local/stor-openresty/nginx//proxy/thirdparty/api" .. "-" .. "gateway/resty/hmac$",
+"/usr/local/stor-openresty/nginx//proxy/thirdparty/thrift/lualib/TApplicationException$",
+"/usr/local/stor-openresty/nginx//proxy/thirdparty/thrift/lualib/TBinaryProtocol$",
+"/usr/local/stor-openresty/nginx//proxy/thirdparty/thrift/lualib/TBufferedTransport$",
+"/usr/local/stor-openresty/nginx//proxy/thirdparty/thrift/lualib/TClient$",
+"/usr/local/stor-openresty/nginx//proxy/thirdparty/thrift/lualib/TCosocket$",
+"/usr/local/stor-openresty/nginx//proxy/thirdparty/thrift/lualib/TException$",
+"/usr/local/stor-openresty/nginx//proxy/thirdparty/thrift/lualib/TFramedTransport$",
+"/usr/local/stor-openresty/nginx//proxy/thirdparty/thrift/lualib/TMessageType$",
+"/usr/local/stor-openresty/nginx//proxy/thirdparty/thrift/lualib/TObject$",
+"/usr/local/stor-openresty/nginx//proxy/thirdparty/thrift/lualib/TProtocolBase$",
+"/usr/local/stor-openresty/nginx//proxy/thirdparty/thrift/lualib/TProtocolException$",
+"/usr/local/stor-openresty/nginx//proxy/thirdparty/thrift/lualib/TTool$",
+"/usr/local/stor-openresty/nginx//proxy/thirdparty/thrift/lualib/TTransportBase$",
+"/usr/local/stor-openresty/nginx//proxy/thirdparty/thrift/lualib/TTransportException$",
+"/usr/local/stor-openresty/nginx//proxy/thirdparty/thrift/lualib/TType$",
+"/usr/local/stor-openresty/nginx//proxy/thirdparty/api-gateway/cache/request/rcache$",
+"/usr/local/stor-openresty/nginx//proxy/thirdparty/api-gateway/cache/status/remoteCacheStatus$",
+"/usr/local/stor-openresty/nginx//proxy/thirdparty/api-gateway/cache/store/localCache$",
+"/usr/local/stor-openresty/nginx//proxy/thirdparty/api-gateway/cache/store/redisCache$",
+"/usr/local/stor-openresty/nginx//proxy/thirdparty/api-gateway/cache/store/redisHashCache$",
+"/usr/local/stor-openresty/nginx//proxy/v4auth/aws/AWSBasicCredentials$",
+"/usr/local/stor-openresty/nginx//proxy/v4auth/aws/AwsDateConverter$",
+"/usr/local/stor-openresty/nginx//proxy/v4auth/aws/AWSIAMCredentials$",
+"/usr/local/stor-openresty/nginx//proxy/v4auth/aws/AwsService$",
+"/usr/local/stor-openresty/nginx//proxy/v4auth/aws/AWSSTSCredentials$",
+"/usr/local/stor-openresty/nginx//proxy/v4auth/aws/AwsV4Signaturei$",
+"/usr/local/stor-openresty/nginx//proxy/v4auth/aws/httpclient/http$",
+"/usr/local/stor-openresty/nginx//proxy/v4auth/aws/httpclient/restyhttp$",
+"/usr/local/stor-openresty/nginx//proxy/v4auth/aws/httpclient/url$",
+"/usr/local/stor-openresty/nginx//proxy/v4auth/aws/kinesis/KinesisService$",
+"/usr/local/stor-openresty/nginx//proxy/v4auth/aws/kms/KmsService$",
+"/usr/local/stor-openresty/nginx//proxy/v4auth/aws/lambda/LambdaService$",
+"/usr/local/stor-openresty/nginx//proxy/v4auth/aws/sns/SnsService$",
+"/usr/local/stor-openresty/nginx//proxy/v4auth/aws/sts/SecurityTokenService$",
+"/usr/local/stor-openresty/lualib/ngx/balancer$",
+"/usr/local/stor-openresty/lualib/ngx/ocsp$",
+"/usr/local/stor-openresty/lualib/ngx/re$",
+"/usr/local/stor-openresty/lualib/ngx/semaphore$",
+"/usr/local/stor-openresty/lualib/ngx/ssl",
+"/usr/local/stor-openresty/lualib/resty/aes",
+"/usr/local/stor-openresty/lualib/resty/core",
+"/usr/local/stor-openresty/lualib/resty/lock",
+"/usr/local/stor-openresty/lualib/resty/lrucache",
+"/usr/local/stor-openresty/lualib/resty/md5",
+"/usr/local/stor-openresty/lualib/resty/memcached",
+"/usr/local/stor-openresty/lualib/resty/mysql",
+"/usr/local/stor-openresty/lualib/resty/random",
+"/usr/local/stor-openresty/lualib/resty/redis",
+"/usr/local/stor-openresty/lualib/resty/sha1",
+"/usr/local/stor-openresty/lualib/resty/sha224",
+"/usr/local/stor-openresty/lualib/resty/sha256",
+"/usr/local/stor-openresty/lualib/resty/sha384",
+"/usr/local/stor-openresty/lualib/resty/sha512",
+"/usr/local/stor-openresty/lualib/resty/sha",
+"/usr/local/stor-openresty/lualib/resty/string",
+"/usr/local/stor-openresty/lualib/resty/upload",
+"/usr/local/stor-openresty/lualib/ngx/ssl/session",
+"/usr/local/stor-openresty/lualib/resty/core/base64",
+"/usr/local/stor-openresty/lualib/resty/core/base",
+"/usr/local/stor-openresty/lualib/resty/core/ctx",
+"/usr/local/stor-openresty/lualib/resty/core/exit",
+"/usr/local/stor-openresty/lualib/resty/core/hash",
+"/usr/local/stor-openresty/lualib/resty/core/misc",
+"/usr/local/stor-openresty/lualib/resty/core/regex",
+"/usr/local/stor-openresty/lualib/resty/core/request",
+"/usr/local/stor-openresty/lualib/resty/core/response",
+"/usr/local/stor-openresty/lualib/resty/core/shdict",
+"/usr/local/stor-openresty/lualib/resty/core/time",
+"/usr/local/stor-openresty/lualib/resty/core/uri",
+"/usr/local/stor-openresty/lualib/resty/core/var",
+"/usr/local/stor-openresty/lualib/resty/core/worker",
+"/usr/local/stor-openresty/lualib/resty/dns/resolver",
+"/usr/local/stor-openresty/lualib/resty/limit/conn",
+"/usr/local/stor-openresty/lualib/resty/limit/req",
+"/usr/local/stor-openresty/lualib/resty/limit/traffic",
+"/usr/local/stor-openresty/lualib/resty/lrucache/pureffi",
+"/usr/local/stor-openresty/lualib/resty/upstream/healthcheck",
+"/usr/local/stor-openresty/lualib/resty/websocket/client",
+"/usr/local/stor-openresty/lualib/resty/websocket/protocol",
+"/usr/local/stor-openresty/lualib/resty/websocket/server",
+"/usr/local/stor-openresty/nginx//proxy/thirdparty/api-gateway/cache/store/redisSetCache",
+},
+
+
+  --- Table mapping names of modules to be included to their filenames.
+  -- Has no effect if empty.
+  -- Real filenames mentioned here will be used for reporting
+  -- even if the modules have been installed elsewhere.
+  -- Module name can contain '*' wildcard to match groups of modules,
+  -- in this case corresponding path will be used as a prefix directory
+  -- where modules from the group are located.
+  -- @usage
+  -- modules = {
+  --    ["some_rock"] = "src/some_rock.lua",
+  --    ["some_rock.*"] = "src"
+  -- }
+  modules = {},
+
+}

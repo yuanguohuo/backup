@@ -1,0 +1,5 @@
+git clone https://github.com/ceph/s3-tests.git
+in bashrc
+S3TEST_CONF="/home/deploy/s3-tests/ds3.conf";export S3TEST_CONF;
+grep 'ERROR: s3tests.'  logfile1031|grep -v  'website'|grep -v versioning|grep -v  versioned|grep -v acl|grep -v cors|grep -v post_object|grep -v test_object_copy
+

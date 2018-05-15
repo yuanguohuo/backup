@@ -1,0 +1,164 @@
+Index: hbase-server/src/main/java/org/apache/hadoop/hbase/regionserver/HRegion.java
+===================================================================
+--- hbase-server/src/main/java/org/apache/hadoop/hbase/regionserver/HRegion.java	(revision 694)
++++ hbase-server/src/main/java/org/apache/hadoop/hbase/regionserver/HRegion.java	(revision 695)
+@@ -3621,40 +3621,129 @@
+             comparator.getValue().length == 0;
+         boolean matches = false;
+         long cellTs = 0;
+-        if (result.size() == 0 && valueIsNull) {
+-          matches = true;
+-        } else if (result.size() > 0 && result.get(0).getValueLength() == 0 &&
+-            valueIsNull) {
+-          matches = true;
+-          cellTs = result.get(0).getTimestamp();
+-        } else if (result.size() == 1 && !valueIsNull) {
++
++        ////////////
++        if (result.size() == 0 || (result.size() > 0 && result.get(0).getValueLength() == 0)) //Yuanguo: current value is null/empty;
++        {
++          if (result.size() > 0)
++          {
++            cellTs = result.get(0).getTimestamp();
++          }
++
++          if(valueIsNull) //Yuanguo: comparator is null/empty;
++          {
++            switch (compareOp)
++            {
++              case LESS:
++                matches = false;    // null/empty < null/empty       false
++                break;
++              case LESS_OR_EQUAL:
++                matches = true;     // null/empty <= null/empty      true
++                break;
++              case EQUAL:
++                matches = true;     // null/empty == null/empty      true
++                break;
++              case NOT_EQUAL:
++                matches = false;    // null/empty != null/empty      false
++                break;
++              case GREATER_OR_EQUAL:
++                matches = true;     // null/empty >= null/empty      true 
++                break;
++              case GREATER:
++                matches = false;    // null/empty > null/empty       false
++                break;
++              default:
++                throw new RuntimeException("Unknown Compare op " + compareOp.name());
++            }
++          }
++          else  //Yuanguo: comparator is not null/empty, it's any string; 
++          {
++            switch (compareOp)
++            {
++              case LESS:
++                matches = false;    // "AnyString" < null/empty       false
++                break;
++              case LESS_OR_EQUAL:
++                matches = false;    // "AnyString" <= null/empty      false 
++                break;
++              case EQUAL:
++                matches = false;    // "AnyString" == null/empty      false 
++                break;
++              case NOT_EQUAL:
++                matches = true;     // "AnyString" != null/empty      true
++                break;
++              case GREATER_OR_EQUAL:
++                matches = true;     // "AnyString" >= null/empty      true 
++                break;
++              case GREATER:
++                matches = true;     // "AnyString" > null/empty       true 
++                break;
++              default:
++                throw new RuntimeException("Unknown Compare op " + compareOp.name());
++            }
++          }
++        }
++        else //Yuanguo:  current value is NOT null/empty;
++        {
+           Cell kv = result.get(0);
+           cellTs = kv.getTimestamp();
+-          int compareResult = comparator.compareTo(kv.getValueArray(),
+-              kv.getValueOffset(), kv.getValueLength());
+-          switch (compareOp) {
+-          case LESS:
+-            matches = compareResult < 0;
+-            break;
+-          case LESS_OR_EQUAL:
+-            matches = compareResult <= 0;
+-            break;
+-          case EQUAL:
+-            matches = compareResult == 0;
+-            break;
+-          case NOT_EQUAL:
+-            matches = compareResult != 0;
+-            break;
+-          case GREATER_OR_EQUAL:
+-            matches = compareResult >= 0;
+-            break;
+-          case GREATER:
+-            matches = compareResult > 0;
+-            break;
+-          default:
+-            throw new RuntimeException("Unknown Compare op " + compareOp.name());
++
++          if(valueIsNull) //Yuanguo: comparator is null/empty;
++          {
++            switch (compareOp)
++            {
++              case LESS:
++                matches = true;     // null/empty < "AnyString"      true 
++                break;
++              case LESS_OR_EQUAL:
++                matches = true;     // null/empty <= "AnyString"     true
++                break;
++              case EQUAL:
++                matches = false;    // null/empty == "AnyString"     false 
++                break;
++              case NOT_EQUAL:
++                matches = true;     // null/empty != "AnyString"     true 
++                break;
++              case GREATER_OR_EQUAL:
++                matches = false;    // null/empty >= "AnyString"     false 
++                break;
++              case GREATER:
++                matches = false;    // null/empty > "AnyString"      false
++                break;
++              default:
++                throw new RuntimeException("Unknown Compare op " + compareOp.name());
++            }
+           }
++          else  //Yuanguo: comparator is not null/empty, it's any string; 
++          {
++            int compareResult = comparator.compareTo(kv.getValueArray(), kv.getValueOffset(), kv.getValueLength());
++            switch (compareOp)
++            {
++              case LESS:
++                matches = compareResult < 0;
++                break;
++              case LESS_OR_EQUAL:
++                matches = compareResult <= 0;
++                break;
++              case EQUAL:
++                matches = compareResult == 0;
++                break;
++              case NOT_EQUAL:
++                matches = compareResult != 0;
++                break;
++              case GREATER_OR_EQUAL:
++                matches = compareResult >= 0;
++                break;
++              case GREATER:
++                matches = compareResult > 0;
++                break;
++              default:
++                throw new RuntimeException("Unknown Compare op " + compareOp.name());
++            }
++          }
+         }
++        ///////////
++
+         //If matches put the new put or delete the new delete
+         if (matches) {
+           // We have acquired the row lock already. If the system clock is NOT monotonically

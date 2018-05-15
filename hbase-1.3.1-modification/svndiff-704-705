@@ -1,0 +1,1377 @@
+Index: DnionTest/src/com/dnion/tests/IDnionHBaseTest.java
+===================================================================
+--- DnionTest/src/com/dnion/tests/IDnionHBaseTest.java	(revision 0)
++++ DnionTest/src/com/dnion/tests/IDnionHBaseTest.java	(revision 705)
+@@ -0,0 +1,6 @@
++package com.dnion.tests;
++
++public interface IDnionHBaseTest
++{
++  boolean runTest();
++}
+Index: DnionTest/src/com/dnion/tests/CheckAndMutateRowTest.java
+===================================================================
+--- DnionTest/src/com/dnion/tests/CheckAndMutateRowTest.java	(revision 0)
++++ DnionTest/src/com/dnion/tests/CheckAndMutateRowTest.java	(revision 705)
+@@ -0,0 +1,545 @@
++package com.dnion.tests;
++
++import com.dnion.hclient.HClient;
++
++import java.io.IOException;
++import org.apache.hadoop.hbase.filter.CompareFilter;
++import org.apache.hadoop.hbase.filter.CompareFilter.CompareOp;
++
++public class CheckAndMutateRowTest implements IDnionHBaseTest
++{
++
++  public boolean runTest()
++  {
++    try
++    {
++      HClient client = new HClient();
++
++      String tableName = "Table_TestCheckAndMutateRow";
++      String[] columns = {"info", "stat", "ver", "quota"};
++
++      client.disableTable(tableName);
++      client.deleteTable(tableName);
++
++
++      client.createTable(tableName, columns);
++
++      //1. Blablabla >= null/empty,  true   (a column of a non-existent row)
++      String rowKey1 = "RowKey1";
++      String[] putFams1 = {"info",    "info",     "stat",    "stat",     "ver",      "ver",     "quota"};
++      String[] putCols1 = {"info1",   "info2",    "stat1",   "stat2",    "ver1",     "ver2",    "quota1"};
++      String[] putVals1 = {"v-info1", "v-info2",  "v-stat1", "v-stat2",  "v-ver1",   "v-ver2",  "v-quota1"};
++
++      boolean ret = client.checkAndMutateRow(tableName, rowKey1, "info", "info1", CompareOp.GREATER_OR_EQUAL, "Blablabla", 
++                              putFams1, putCols1, putVals1, null);
++      if(!ret)
++      {
++        System.out.println(getClass().getName()+" "+"FAIL: Test-1, checkAndMutateRow failed");
++        return false;
++      }
++      ret = client.checkRow(tableName, rowKey1, putFams1, putCols1, putVals1);
++      if(!ret)
++      {
++        System.out.println(getClass().getName()+" "+"FAIL: Test-1, checkRow failed");
++        return false;
++      }
++
++      //2. Blablabla >= null/empty,  true   (a non-existent column of an existent row)
++      String[] putFams2 = {"stat",       "stat",        "ver",         "ver",        "quota",        "quota"};
++      String[] putCols2 = {"stat1",      "stat2",       "ver1",        "ver2",       "quota1",       "quota2"};
++      String[] putVals2 = {"v-stat1-2",  "v-stat2-2",   "v-ver1-2",    "v-ver2-2",   "v-quota1-2",   "v-quota2-2"};
++      String[] delCols2 = {"info"};
++      ret = client.checkAndMutateRow(tableName, rowKey1, "quota", "NotExistCol", CompareOp.GREATER_OR_EQUAL, "Blablabla", 
++                              putFams2, putCols2, putVals2, delCols2);
++      if(!ret)
++      {
++        System.out.println(getClass().getName()+" "+"FAIL: Test-2, checkAndMutateRow failed");
++        return false;
++      }
++      String[] expFams2 = {"info",      "info",     "stat",       "stat",        "ver",         "ver",        "quota",        "quota"};
++      String[] expCols2 = {"info1",     "info2",    "stat1",      "stat2",       "ver1",        "ver2",       "quota1",       "quota2"};
++      String[] expVals2 = {null,        null,       "v-stat1-2",  "v-stat2-2",   "v-ver1-2",    "v-ver2-2",   "v-quota1-2",   "v-quota2-2"};
++      ret = client.checkRow(tableName, rowKey1, expFams2, expCols2, expVals2);
++      if(!ret)
++      {
++        System.out.println(getClass().getName()+" "+"FAIL: Test-2, checkRow failed");
++        return false;
++      }
++
++      //3. null/empty < null/empty, false
++      ret = client.checkAndMutateRow(tableName, rowKey1, "quota", "NotExistCol", CompareOp.LESS, "", 
++                              putFams1, putCols1, putVals1, null);
++      if(ret)
++      {
++        System.out.println(getClass().getName()+" "+"FAIL: Test-3, checkAndMutateRow should fail but it succeeded");
++        return false;
++      }
++      ret = client.checkRow(tableName, rowKey1, expFams2, expCols2, expVals2);
++      if(!ret)
++      {
++        System.out.println(getClass().getName()+" "+"FAIL: Test-3, checkRow failed");
++        return false;
++      }
++
++      //4. null/empty <= null/empty, true
++      ret = client.checkAndMutateRow(tableName, rowKey1, "quota", "NotExistCol", CompareOp.LESS_OR_EQUAL, "", 
++                              putFams1, putCols1, putVals1, null);
++      if(!ret)
++      {
++        System.out.println(getClass().getName()+" "+"FAIL: Test-4, checkAndMutateRow failed");
++        return false;
++      }
++      String[] expFams4 = {"info",      "info",     "stat",       "stat",        "ver",         "ver",        "quota",        "quota"};
++      String[] expCols4 = {"info1",     "info2",    "stat1",      "stat2",       "ver1",        "ver2",       "quota1",       "quota2"};
++      String[] expVals4 = {"v-info1",   "v-info2",  "v-stat1"  ,  "v-stat2",     "v-ver1",      "v-ver2",     "v-quota1",     "v-quota2-2"};
++      ret = client.checkRow(tableName, rowKey1, expFams4, expCols4, expVals4);
++      if(!ret)
++      {
++        System.out.println(getClass().getName()+" "+"FAIL: Test-4, checkRow failed");
++        return false;
++      }
++
++      //5. null/empty == null/empty, true
++      ret = client.checkAndMutateRow(tableName, rowKey1, "quota", "NotExistCol", CompareOp.EQUAL, "",
++                              putFams2, putCols2, putVals2, delCols2);
++      if(!ret)
++      {
++        System.out.println(getClass().getName()+" "+"FAIL: Test-5, checkAndMutateRow failed");
++        return false;
++      }
++      String[] expFams5 = {"info",      "info",     "stat",       "stat",        "ver",         "ver",        "quota",        "quota"};
++      String[] expCols5 = {"info1",     "info2",    "stat1",      "stat2",       "ver1",        "ver2",       "quota1",       "quota2"};
++      String[] expVals5 = {null,        null,       "v-stat1-2",  "v-stat2-2",   "v-ver1-2",    "v-ver2-2",   "v-quota1-2",   "v-quota2-2"};
++      ret = client.checkRow(tableName, rowKey1, expFams5, expCols5, expVals5);
++      if(!ret)
++      {
++        System.out.println(getClass().getName()+" "+"FAIL: Test-5, checkRow failed");
++        return false;
++      }
++
++
++      //6. null/empty != null/empty, false 
++      ret = client.checkAndMutateRow(tableName, rowKey1, "quota", "NotExistCol", CompareOp.NOT_EQUAL, "",
++                              putFams1, putCols1, putVals1, null);
++      if(ret)
++      {
++        System.out.println(getClass().getName()+" "+"FAIL: Test-6, checkAndMutateRow should fail but it succeeded");
++        return false;
++      }
++      String[] expFams6 = {"info",      "info",     "stat",       "stat",        "ver",         "ver",        "quota",        "quota"};
++      String[] expCols6 = {"info1",     "info2",    "stat1",      "stat2",       "ver1",        "ver2",       "quota1",       "quota2"};
++      String[] expVals6 = {null,        null,       "v-stat1-2",  "v-stat2-2",   "v-ver1-2",    "v-ver2-2",   "v-quota1-2",   "v-quota2-2"};
++      ret = client.checkRow(tableName, rowKey1, expFams6, expCols6, expVals6);
++      if(!ret)
++      {
++        System.out.println(getClass().getName()+" "+"FAIL: Test-6, checkRow failed");
++        return false;
++      }
++
++
++      //7. null/empty > null/empty, false
++      ret = client.checkAndMutateRow(tableName, rowKey1, "quota", "NotExistCol", CompareOp.GREATER, "",
++                              putFams1, putCols1, putVals1, null);
++      if(ret)
++      {
++        System.out.println(getClass().getName()+" "+"FAIL: Test-7, checkAndMutateRow should fail but it succeeded");
++        return false;
++      }
++      String[] expFams7 = {"info",      "info",     "stat",       "stat",        "ver",         "ver",        "quota",        "quota"};
++      String[] expCols7 = {"info1",     "info2",    "stat1",      "stat2",       "ver1",        "ver2",       "quota1",       "quota2"};
++      String[] expVals7 = {null,        null,       "v-stat1-2",  "v-stat2-2",   "v-ver1-2",    "v-ver2-2",   "v-quota1-2",   "v-quota2-2"};
++      ret = client.checkRow(tableName, rowKey1, expFams7, expCols7, expVals7);
++      if(!ret)
++      {
++        System.out.println(getClass().getName()+" "+"FAIL: Test-7, checkRow failed");
++        return false;
++      }
++
++      //8. null/empty >= null/empty, true 
++      ret = client.checkAndMutateRow(tableName, rowKey1, "quota", "NotExistCol", CompareOp.GREATER_OR_EQUAL, "",
++                              putFams1, putCols1, putVals1, null);
++      if(!ret)
++      {
++        System.out.println(getClass().getName()+" "+"FAIL: Test-8, checkAndMutateRow failed");
++        return false;
++      }
++      String[] expFams8 = {"info",      "info",     "stat",       "stat",        "ver",         "ver",        "quota",        "quota"};
++      String[] expCols8 = {"info1",     "info2",    "stat1",      "stat2",       "ver1",        "ver2",       "quota1",       "quota2"};
++      String[] expVals8 = {"v-info1",   "v-info2",  "v-stat1",    "v-stat2",     "v-ver1",      "v-ver2",     "v-quota1",     "v-quota2-2"};
++      ret = client.checkRow(tableName, rowKey1, expFams8, expCols8, expVals8);
++      if(!ret)
++      {
++        System.out.println(getClass().getName()+" "+"FAIL: Test-8, checkRow failed");
++        return false;
++      }
++
++
++      
++      //9. Blabla < null/empty, false 
++      ret = client.checkAndMutateRow(tableName, rowKey1, "quota", "NotExistCol", CompareOp.LESS, "Blabla",
++                              putFams2, putCols2, putVals2, null);
++      if(ret)
++      {
++        System.out.println(getClass().getName()+" "+"FAIL: Test-9, checkAndMutateRow should fail but it succeeded");
++        return false;
++      }
++      String[] expFams9 = {"info",      "info",     "stat",       "stat",        "ver",         "ver",        "quota",        "quota"};
++      String[] expCols9 = {"info1",     "info2",    "stat1",      "stat2",       "ver1",        "ver2",       "quota1",       "quota2"};
++      String[] expVals9 = {"v-info1",   "v-info2",  "v-stat1",    "v-stat2",     "v-ver1",      "v-ver2",     "v-quota1",     "v-quota2-2"};
++      ret = client.checkRow(tableName, rowKey1, expFams9, expCols9, expVals9);
++      if(!ret)
++      {
++        System.out.println(getClass().getName()+" "+"FAIL: Test-9, checkRow failed");
++        return false;
++      }
++
++
++      //10. Blabla <= null/empty, false 
++      ret = client.checkAndMutateRow(tableName, rowKey1, "quota", "NotExistCol", CompareOp.LESS_OR_EQUAL, "Blabla",
++                              putFams2, putCols2, putVals2, null);
++      if(ret)
++      {
++        System.out.println(getClass().getName()+" "+"FAIL: Test-10, checkAndMutateRow should fail but it succeeded");
++        return false;
++      }
++      String[] expFams10 = {"info",      "info",     "stat",       "stat",        "ver",         "ver",        "quota",        "quota"};
++      String[] expCols10 = {"info1",     "info2",    "stat1",      "stat2",       "ver1",        "ver2",       "quota1",       "quota2"};
++      String[] expVals10 = {"v-info1",   "v-info2",  "v-stat1",    "v-stat2",     "v-ver1",      "v-ver2",     "v-quota1",     "v-quota2-2"};
++      ret = client.checkRow(tableName, rowKey1, expFams10, expCols10, expVals10);
++      if(!ret)
++      {
++        System.out.println(getClass().getName()+" "+"FAIL: Test-10, checkRow failed");
++        return false;
++      }
++
++
++      //11. Blabla == null/empty, false 
++      ret = client.checkAndMutateRow(tableName, rowKey1, "quota", "NotExistCol", CompareOp.EQUAL, "Blabla",
++                              putFams2, putCols2, putVals2, null);
++      if(ret)
++      {
++        System.out.println(getClass().getName()+" "+"FAIL: Test-11, checkAndMutateRow should fail but it succeeded");
++        return false;
++      }
++      String[] expFams11 = {"info",      "info",     "stat",       "stat",        "ver",         "ver",        "quota",        "quota"};
++      String[] expCols11 = {"info1",     "info2",    "stat1",      "stat2",       "ver1",        "ver2",       "quota1",       "quota2"};
++      String[] expVals11 = {"v-info1",   "v-info2",  "v-stat1",    "v-stat2",     "v-ver1",      "v-ver2",     "v-quota1",     "v-quota2-2"};
++      ret = client.checkRow(tableName, rowKey1, expFams11, expCols11, expVals11);
++      if(!ret)
++      {
++        System.out.println(getClass().getName()+" "+"FAIL: Test-11, checkRow failed");
++        return false;
++      }
++
++
++      //12. Blabla != null/empty, true
++      ret = client.checkAndMutateRow(tableName, rowKey1, "quota", "NotExistCol", CompareOp.NOT_EQUAL, "Blabla",
++                              putFams2, putCols2, putVals2, null);
++      if(!ret)
++      {
++        System.out.println(getClass().getName()+" "+"FAIL: Test-12, checkAndMutateRow failed");
++        return false;
++      }
++      String[] expFams12 = {"info",      "info",     "stat",       "stat",        "ver",         "ver",        "quota",        "quota"};
++      String[] expCols12 = {"info1",     "info2",    "stat1",      "stat2",       "ver1",        "ver2",       "quota1",       "quota2"};
++      String[] expVals12 = {"v-info1",   "v-info2",  "v-stat1-2",  "v-stat2-2",   "v-ver1-2",    "v-ver2-2",   "v-quota1-2",   "v-quota2-2"};
++      ret = client.checkRow(tableName, rowKey1, expFams12, expCols12, expVals12);
++      if(!ret)
++      {
++        System.out.println(getClass().getName()+" "+"FAIL: Test-12, checkRow failed");
++        return false;
++      }
++
++      //13. Blabla > null/empty, true
++      ret = client.checkAndMutateRow(tableName, rowKey1, "quota", "NotExistCol", CompareOp.GREATER, "Blabla",
++                              putFams1, putCols1, putVals1, null);
++      if(!ret)
++      {
++        System.out.println(getClass().getName()+" "+"FAIL: Test-13, checkAndMutateRow failed");
++        return false;
++      }
++      String[] expFams13 = {"info",      "info",     "stat",       "stat",        "ver",         "ver",        "quota",        "quota"};
++      String[] expCols13 = {"info1",     "info2",    "stat1",      "stat2",       "ver1",        "ver2",       "quota1",       "quota2"};
++      String[] expVals13 = {"v-info1",   "v-info2",  "v-stat1",    "v-stat2",     "v-ver1",      "v-ver2",     "v-quota1",     "v-quota2-2"};
++      ret = client.checkRow(tableName, rowKey1, expFams13, expCols13, expVals13);
++      if(!ret)
++      {
++        System.out.println(getClass().getName()+" "+"FAIL: Test-13, checkRow failed");
++        return false;
++      }
++
++
++      //14. null/empty < "v-info1", true 
++      ret = client.checkAndMutateRow(tableName, rowKey1, "info", "info1", CompareOp.LESS, "",
++                              putFams2, putCols2, putVals2, null);
++      if(!ret)
++      {
++        System.out.println(getClass().getName()+" "+"FAIL: Test-14, checkAndMutateRow failed");
++        return false;
++      }
++      String[] expFams14 = {"info",      "info",     "stat",       "stat",        "ver",         "ver",        "quota",        "quota"};
++      String[] expCols14 = {"info1",     "info2",    "stat1",      "stat2",       "ver1",        "ver2",       "quota1",       "quota2"};
++      String[] expVals14 = {"v-info1",   "v-info2",  "v-stat1-2",  "v-stat2-2",   "v-ver1-2",    "v-ver2-2",   "v-quota1-2",   "v-quota2-2"};
++      ret = client.checkRow(tableName, rowKey1, expFams14, expCols14, expVals14);
++      if(!ret)
++      {
++        System.out.println(getClass().getName()+" "+"FAIL: Test-14, checkRow failed");
++        return false;
++      }
++
++
++      //15. null/empty <= "v-info1", true 
++      ret = client.checkAndMutateRow(tableName, rowKey1, "info", "info1", CompareOp.LESS_OR_EQUAL, "",
++                              putFams1, putCols1, putVals1, null);
++      if(!ret)
++      {
++        System.out.println(getClass().getName()+" "+"FAIL: Test-15, checkAndMutateRow failed");
++        return false;
++      }
++      String[] expFams15 = {"info",      "info",     "stat",       "stat",        "ver",         "ver",        "quota",        "quota"};
++      String[] expCols15 = {"info1",     "info2",    "stat1",      "stat2",       "ver1",        "ver2",       "quota1",       "quota2"};
++      String[] expVals15 = {"v-info1",   "v-info2",  "v-stat1",  "v-stat2",   "v-ver1",    "v-ver2",   "v-quota1",   "v-quota2-2"};
++      ret = client.checkRow(tableName, rowKey1, expFams15, expCols15, expVals15);
++      if(!ret)
++      {
++        System.out.println(getClass().getName()+" "+"FAIL: Test-15, checkRow failed");
++        return false;
++      }
++
++
++      //16. null/empty == "v-info1", false
++      ret = client.checkAndMutateRow(tableName, rowKey1, "info", "info1", CompareOp.EQUAL, "",
++                              putFams2, putCols2, putVals2, null);
++      if(ret)
++      {
++        System.out.println(getClass().getName()+" "+"FAIL: Test-16, checkAndMutateRow should fail but it succeeded");
++        return false;
++      }
++      String[] expFams16 = {"info",      "info",     "stat",       "stat",        "ver",         "ver",        "quota",        "quota"};
++      String[] expCols16 = {"info1",     "info2",    "stat1",      "stat2",       "ver1",        "ver2",       "quota1",       "quota2"};
++      String[] expVals16 = {"v-info1",   "v-info2",  "v-stat1",  "v-stat2",   "v-ver1",    "v-ver2",   "v-quota1",   "v-quota2-2"};
++      ret = client.checkRow(tableName, rowKey1, expFams16, expCols16, expVals16);
++      if(!ret)
++      {
++        System.out.println(getClass().getName()+" "+"FAIL: Test-16, checkRow failed");
++        return false;
++      }
++
++
++      //17. null/empty != "v-info1", true 
++      ret = client.checkAndMutateRow(tableName, rowKey1, "info", "info1", CompareOp.NOT_EQUAL, "",
++                              putFams2, putCols2, putVals2, null);
++      if(!ret)
++      {
++        System.out.println(getClass().getName()+" "+"FAIL: Test-17, checkAndMutateRow failed");
++        return false;
++      }
++      String[] expFams17 = {"info",      "info",     "stat",       "stat",        "ver",         "ver",        "quota",        "quota"};
++      String[] expCols17 = {"info1",     "info2",    "stat1",      "stat2",       "ver1",        "ver2",       "quota1",       "quota2"};
++      String[] expVals17 = {"v-info1",   "v-info2",  "v-stat1-2",  "v-stat2-2",   "v-ver1-2",    "v-ver2-2",   "v-quota1-2",   "v-quota2-2"};
++      ret = client.checkRow(tableName, rowKey1, expFams17, expCols17, expVals17);
++      if(!ret)
++      {
++        System.out.println(getClass().getName()+" "+"FAIL: Test-17, checkRow failed");
++        return false;
++      }
++
++
++      //18. null/empty > "v-info1", false 
++      ret = client.checkAndMutateRow(tableName, rowKey1, "info", "info1", CompareOp.GREATER, "",
++                              putFams1, putCols1, putVals1, null);
++      if(ret)
++      {
++        System.out.println(getClass().getName()+" "+"FAIL: Test-18, checkAndMutateRow should fail but it succeeded");
++        return false;
++      }
++      String[] expFams18 = {"info",      "info",     "stat",       "stat",        "ver",         "ver",        "quota",        "quota"};
++      String[] expCols18 = {"info1",     "info2",    "stat1",      "stat2",       "ver1",        "ver2",       "quota1",       "quota2"};
++      String[] expVals18 = {"v-info1",   "v-info2",  "v-stat1-2",  "v-stat2-2",   "v-ver1-2",    "v-ver2-2",   "v-quota1-2",   "v-quota2-2"};
++      ret = client.checkRow(tableName, rowKey1, expFams18, expCols18, expVals18);
++      if(!ret)
++      {
++        System.out.println(getClass().getName()+" "+"FAIL: Test-18, checkRow failed");
++        return false;
++      }
++
++      //19. null/empty >= "v-info1", false 
++      ret = client.checkAndMutateRow(tableName, rowKey1, "info", "info1", CompareOp.GREATER_OR_EQUAL, "",
++                              putFams1, putCols1, putVals1, null);
++      if(ret)
++      {
++        System.out.println(getClass().getName()+" "+"FAIL: Test-19, checkAndMutateRow should fail but it succeeded");
++        return false;
++      }
++      String[] expFams19 = {"info",      "info",     "stat",       "stat",        "ver",         "ver",        "quota",        "quota"};
++      String[] expCols19 = {"info1",     "info2",    "stat1",      "stat2",       "ver1",        "ver2",       "quota1",       "quota2"};
++      String[] expVals19 = {"v-info1",   "v-info2",  "v-stat1-2",  "v-stat2-2",   "v-ver1-2",    "v-ver2-2",   "v-quota1-2",   "v-quota2-2"};
++      ret = client.checkRow(tableName, rowKey1, expFams19, expCols19, expVals19);
++      if(!ret)
++      {
++        System.out.println(getClass().getName()+" "+"FAIL: Test-19, checkRow failed");
++        return false;
++      }
++
++
++      //20. "v-info1" >= "v-info1", true
++      ret = client.checkAndMutateRow(tableName, rowKey1, "info", "info1", CompareOp.GREATER_OR_EQUAL, "v-info1",
++                              putFams1, putCols1, putVals1, null);
++      if(!ret)
++      {
++        System.out.println(getClass().getName()+" "+"FAIL: Test-29, checkAndMutateRow failed");
++        return false;
++      }
++      String[] expFams20 = {"info",      "info",     "stat",       "stat",        "ver",         "ver",        "quota",        "quota"};
++      String[] expCols20 = {"info1",     "info2",    "stat1",      "stat2",       "ver1",        "ver2",       "quota1",       "quota2"};
++      String[] expVals20 = {"v-info1",   "v-info2",  "v-stat1",  "v-stat2",   "v-ver1",    "v-ver2",   "v-quota1",   "v-quota2-2"};
++      ret = client.checkRow(tableName, rowKey1, expFams20, expCols20, expVals20);
++      if(!ret)
++      {
++        System.out.println(getClass().getName()+" "+"FAIL: Test-20, checkRow failed");
++        return false;
++      }
++
++
++      //21. "v-info1" == "v-info1", true
++      ret = client.checkAndMutateRow(tableName, rowKey1, "info", "info1", CompareOp.EQUAL, "v-info1",
++                              putFams2, putCols2, putVals2, null);
++      if(!ret)
++      {
++        System.out.println(getClass().getName()+" "+"FAIL: Test-21, checkAndMutateRow failed");
++        return false;
++      }
++      String[] expFams21 = {"info",      "info",     "stat",       "stat",        "ver",         "ver",        "quota",        "quota"};
++      String[] expCols21 = {"info1",     "info2",    "stat1",      "stat2",       "ver1",        "ver2",       "quota1",       "quota2"};
++      String[] expVals21 = {"v-info1",   "v-info2",  "v-stat1-2",  "v-stat2-2",   "v-ver1-2",    "v-ver2-2",   "v-quota1-2",   "v-quota2-2"};
++      ret = client.checkRow(tableName, rowKey1, expFams21, expCols21, expVals21);
++      if(!ret)
++      {
++        System.out.println(getClass().getName()+" "+"FAIL: Test-21, checkRow failed");
++        return false;
++      }
++
++
++      //22. "v-info1" > "v-info1", false
++      ret = client.checkAndMutateRow(tableName, rowKey1, "info", "info1", CompareOp.GREATER, "v-info1",
++                              putFams1, putCols1, putVals1, null);
++      if(ret)
++      {
++        System.out.println(getClass().getName()+" "+"FAIL: Test-22, checkAndMutateRow should fail but it succeeded");
++        return false;
++      }
++      String[] expFams22 = {"info",      "info",     "stat",       "stat",        "ver",         "ver",        "quota",        "quota"};
++      String[] expCols22 = {"info1",     "info2",    "stat1",      "stat2",       "ver1",        "ver2",       "quota1",       "quota2"};
++      String[] expVals22 = {"v-info1",   "v-info2",  "v-stat1-2",  "v-stat2-2",   "v-ver1-2",    "v-ver2-2",   "v-quota1-2",   "v-quota2-2"};
++      ret = client.checkRow(tableName, rowKey1, expFams22, expCols22, expVals22);
++      if(!ret)
++      {
++        System.out.println(getClass().getName()+" "+"FAIL: Test-22, checkRow failed");
++        return false;
++      }
++
++      //23. "v-info1" < "v-info1", false
++      ret = client.checkAndMutateRow(tableName, rowKey1, "info", "info1", CompareOp.LESS, "v-info1",
++                              putFams1, putCols1, putVals1, null);
++      if(ret)
++      {
++        System.out.println(getClass().getName()+" "+"FAIL: Test-23, checkAndMutateRow should fail but it succeeded");
++        return false;
++      }
++      String[] expFams23 = {"info",      "info",     "stat",       "stat",        "ver",         "ver",        "quota",        "quota"};
++      String[] expCols23 = {"info1",     "info2",    "stat1",      "stat2",       "ver1",        "ver2",       "quota1",       "quota2"};
++      String[] expVals23 = {"v-info1",   "v-info2",  "v-stat1-2",  "v-stat2-2",   "v-ver1-2",    "v-ver2-2",   "v-quota1-2",   "v-quota2-2"};
++      ret = client.checkRow(tableName, rowKey1, expFams23, expCols23, expVals23);
++      if(!ret)
++      {
++        System.out.println(getClass().getName()+" "+"FAIL: Test-23, checkRow failed");
++        return false;
++      }
++
++
++      //24. "v-info1" <= "v-info1", true
++      ret = client.checkAndMutateRow(tableName, rowKey1, "info", "info1", CompareOp.LESS_OR_EQUAL, "v-info1",
++                              putFams1, putCols1, putVals1, null);
++      if(!ret)
++      {
++        System.out.println(getClass().getName()+" "+"FAIL: Test-24, checkAndMutateRow failed");
++        return false;
++      }
++      String[] expFams24 = {"info",      "info",     "stat",       "stat",        "ver",         "ver",        "quota",        "quota"};
++      String[] expCols24 = {"info1",     "info2",    "stat1",      "stat2",       "ver1",        "ver2",       "quota1",       "quota2"};
++      String[] expVals24 = {"v-info1",   "v-info2",  "v-stat1",  "v-stat2",   "v-ver1",    "v-ver2",   "v-quota1",   "v-quota2-2"};
++      ret = client.checkRow(tableName, rowKey1, expFams24, expCols24, expVals24);
++      if(!ret)
++      {
++        System.out.println(getClass().getName()+" "+"FAIL: Test-24, checkRow failed");
++        return false;
++      }
++
++
++      //25. "v-info0" < "v-info1", true
++      ret = client.checkAndMutateRow(tableName, rowKey1, "info", "info1", CompareOp.LESS, "v-info0",
++                              putFams2, putCols2, putVals2, null);
++      if(!ret)
++      {
++        System.out.println(getClass().getName()+" "+"FAIL: Test-25, checkAndMutateRow failed");
++        return false;
++      }
++      String[] expFams25 = {"info",      "info",     "stat",       "stat",        "ver",         "ver",        "quota",        "quota"};
++      String[] expCols25 = {"info1",     "info2",    "stat1",      "stat2",       "ver1",        "ver2",       "quota1",       "quota2"};
++      String[] expVals25 = {"v-info1",   "v-info2",  "v-stat1-2",  "v-stat2-2",   "v-ver1-2",    "v-ver2-2",   "v-quota1-2",   "v-quota2-2"};
++      ret = client.checkRow(tableName, rowKey1, expFams25, expCols25, expVals25);
++      if(!ret)
++      {
++        System.out.println(getClass().getName()+" "+"FAIL: Test-25, checkRow failed");
++        return false;
++      }
++
++      //26. "v-info2" > "v-info1", true
++      ret = client.checkAndMutateRow(tableName, rowKey1, "info", "info1", CompareOp.GREATER, "v-info2",
++                              putFams1, putCols1, putVals1, null);
++      if(!ret)
++      {
++        System.out.println(getClass().getName()+" "+"FAIL: Test-26, checkAndMutateRow failed");
++        return false;
++      }
++      String[] expFams26 = {"info",      "info",     "stat",       "stat",        "ver",         "ver",        "quota",        "quota"};
++      String[] expCols26 = {"info1",     "info2",    "stat1",      "stat2",       "ver1",        "ver2",       "quota1",       "quota2"};
++      String[] expVals26 = {"v-info1",   "v-info2",  "v-stat1",  "v-stat2",   "v-ver1",    "v-ver2",   "v-quota1",   "v-quota2-2"};
++      ret = client.checkRow(tableName, rowKey1, expFams26, expCols26, expVals26);
++      if(!ret)
++      {
++        System.out.println(getClass().getName()+" "+"FAIL: Test-26, checkRow failed");
++        return false;
++      }
++
++
++      //27. "v-info2" >= "v-info1", true
++      ret = client.checkAndMutateRow(tableName, rowKey1, "info", "info1", CompareOp.GREATER_OR_EQUAL, "v-info2",
++                              putFams2, putCols2, putVals2, null);
++      if(!ret)
++      {
++        System.out.println(getClass().getName()+" "+"FAIL: Test-27, checkAndMutateRow failed");
++        return false;
++      }
++      String[] expFams27 = {"info",      "info",     "stat",       "stat",        "ver",         "ver",        "quota",        "quota"};
++      String[] expCols27 = {"info1",     "info2",    "stat1",      "stat2",       "ver1",        "ver2",       "quota1",       "quota2"};
++      String[] expVals27 = {"v-info1",   "v-info2",  "v-stat1-2",  "v-stat2-2",   "v-ver1-2",    "v-ver2-2",   "v-quota1-2",   "v-quota2-2"};
++      ret = client.checkRow(tableName, rowKey1, expFams27, expCols27, expVals27);
++      if(!ret)
++      {
++        System.out.println(getClass().getName()+" "+"FAIL: Test-27, checkRow failed");
++        return false;
++      }
++
++      client.close();
++
++      return true;
++    }
++    catch(IOException e)
++    {
++      e.printStackTrace();
++    }
++
++    return false;
++  }
++}
+Index: DnionTest/src/com/dnion/tests/MainRun.java
+===================================================================
+--- DnionTest/src/com/dnion/tests/MainRun.java	(revision 0)
++++ DnionTest/src/com/dnion/tests/MainRun.java	(revision 705)
+@@ -0,0 +1,28 @@
++package com.dnion.tests;
++
++
++public class MainRun
++{
++  public static void main(String[] args)
++  {
++    IDnionHBaseTest tests[] = 
++    {
++      new CheckAndMutateAndGetRowTest(),
++      new CheckAndMutateRowTest()
++    };
++
++    int counter = 0;
++    for(IDnionHBaseTest t:tests)
++    {
++      boolean succ = t.runTest();
++      if (!succ)
++      {
++        return ;
++      }
++
++      counter++;
++    }
++
++    System.out.println("Tests:"+tests.length + " Passed:"+counter);
++  }
++}
+Index: DnionTest/src/com/dnion/tests/CheckAndMutateAndGetRowTest.java
+===================================================================
+--- DnionTest/src/com/dnion/tests/CheckAndMutateAndGetRowTest.java	(revision 0)
++++ DnionTest/src/com/dnion/tests/CheckAndMutateAndGetRowTest.java	(revision 705)
+@@ -0,0 +1,219 @@
++package com.dnion.tests;
++
++import com.dnion.hclient.HClient;
++
++import java.io.IOException;
++import org.apache.hadoop.hbase.filter.CompareFilter;
++import org.apache.hadoop.hbase.filter.CompareFilter.CompareOp;
++
++import org.apache.hadoop.hbase.client.Result;
++
++import org.apache.hadoop.hbase.util.Pair;
++
++public class CheckAndMutateAndGetRowTest implements IDnionHBaseTest
++{
++  public boolean runTest()
++  {
++    try
++    {
++      HClient client = new HClient();
++
++      String tableName = "Table_TestCheckAndMutateAndGetRow";
++      String[] columns = {"info", "stat", "ver", "quota"};
++
++      client.disableTable(tableName);
++      client.deleteTable(tableName);
++
++      client.createTable(tableName, columns);
++
++
++      Pair<Boolean, Result> pair = null;
++      boolean ret;
++
++      //Test1: The row didn't exist before;  Check Successful. Return original (empty)
++      String rowKey1    = "RowKey1";
++      String[] putFams1 = {"info",    "stat",    "stat",   "stat"};
++      String[] putCols1 = {"info2",   "space",   "used",   "left"};
++      String[] putVals1 = {"YUANGUO", "4T",      "1T",     "3T"};
++      String[] delCols1 = {"ver"};
++
++      pair = client.checkAndMutateAndGetRow(tableName, rowKey1, "info", "info1", CompareOp.GREATER_OR_EQUAL, "CBBBBB",
++               putFams1, putCols1, putVals1, delCols1);
++
++      String[] checkPairFams1 = {};
++      String[] checkPairCols1 = {};
++      String[] checkPairVals1 = {};
++      ret = client.checkPair(pair, new Boolean(true), checkPairFams1, checkPairCols1, checkPairVals1);
++      if(!ret)
++      {
++        System.out.println(getClass().getName() + " FAIL: Test-1, checkPair failed");
++        return false;
++      }
++
++      String[] checkRowFams1 = {"info",    "stat",    "stat",   "stat",  "ver"};
++      String[] checkRowCols1 = {"info2",   "space",   "used",   "left",  "ver1"};
++      String[] checkRowVals1 = {"YUANGUO", "4T",      "1T",     "3T",    null};
++      ret = client.checkRow(tableName, rowKey1, checkRowFams1, checkRowCols1, checkRowVals1);
++      if(!ret)
++      {
++        System.out.println(getClass().getName() + " FAIL: Test-1, checkRow failed");
++        return false;
++      }
++
++      //Test2: The row existed before, but the colum to be checked didn't exist;  Check Successful; Return oringal (non-empty)
++      String[] putFams2 = {"info",           "stat",    "stat",   "stat",  "ver"};
++      String[] putCols2 = {"info2",          "space",   "used",   "left",  "tag"};
++      String[] putVals2 = {"WillBeDeleted",  "8T",      "3T",     "5T",    "111"};
++      String[] delCols2 = {"info"};
++
++      pair = client.checkAndMutateAndGetRow(tableName, rowKey1, "info", "NotExistColumn", CompareOp.GREATER_OR_EQUAL, "CBBBBB",
++               putFams2, putCols2, putVals2, delCols2);
++      ret = client.checkPair(pair, new Boolean(true), checkRowFams1, checkRowCols1, checkRowVals1);
++      if(!ret)
++      {
++        System.out.println(getClass().getName() + " FAIL: Test-2, checkPair failed");
++        return false;
++      }
++
++      String[] checkRowFams2 = {"info",  "stat",    "stat",   "stat",  "ver"};
++      String[] checkRowCols2 = {"info2", "space",   "used",   "left",  "tag"};
++      String[] checkRowVals2 = {null,    "8T",      "3T",     "5T",    "111"};
++      ret = client.checkRow(tableName, rowKey1, checkRowFams2, checkRowCols2, checkRowVals2);
++      if(!ret)
++      {
++        System.out.println(getClass().getName() + " FAIL: Test-2, checkRow failed");
++        return false;
++      }
++
++      //Test3: check on existsent column;  Check Successful; Return oringal (non-empty)
++      String[] putFams3 = {"info",           "stat",    "stat",   "stat",  "ver"};
++      String[] putCols3 = {"info2",          "space",   "used",   "left",  "tag"};
++      String[] putVals3 = {"info222",        "6T",      "4T",     "2T",    "tag222"};
++      String[] delCols3 = {"info", "ver", "stat:left"};
++
++      pair = client.checkAndMutateAndGetRow(tableName, rowKey1, "stat", "space", CompareOp.GREATER_OR_EQUAL, "9T",
++               putFams3, putCols3, putVals3, delCols3);
++      ret = client.checkPair(pair, new Boolean(true), checkRowFams2, checkRowCols2, checkRowVals2);
++      if(!ret)
++      {
++        System.out.println(getClass().getName() + " FAIL: Test-3, checkPair failed");
++        return false;
++      }
++
++      String[] checkRowFams3 = {"info",  "stat",    "stat",   "stat",  "ver"};
++      String[] checkRowCols3 = {"info2", "space",   "used",   "left",  "tag"};
++      String[] checkRowVals3 = {null,    "6T",      "4T",     null,    null};
++      ret = client.checkRow(tableName, rowKey1, checkRowFams3, checkRowCols3, checkRowVals3);
++      if(!ret)
++      {
++        System.out.println(getClass().getName() + " FAIL: Test-3, checkRow failed");
++        return false;
++      }
++
++      //Test4: check on existsent column; Check Successful; Return oringal (non-empty). Delete ALL;
++      String[] delCols4 = {"info", "ver", "stat"};
++      pair = client.checkAndMutateAndGetRow(tableName, rowKey1, "stat", "space", CompareOp.EQUAL, "6T",
++               null, null, null, delCols4);
++      ret = client.checkPair(pair, new Boolean(true), checkRowFams3, checkRowCols3, checkRowVals3);
++      if(!ret)
++      {
++        System.out.println(getClass().getName() + " FAIL: Test-4, checkPair failed");
++        return false;
++      }
++
++      String[] checkRowFams4 = {};
++      String[] checkRowCols4 = {};
++      String[] checkRowVals4 = {};
++      ret = client.checkRow(tableName, rowKey1, checkRowFams4, checkRowCols4, checkRowVals4);
++      if(!ret)
++      {
++        System.out.println(getClass().getName() + " FAIL: Test-4, checkRow failed");
++        return false;
++      }
++
++      //Test5: check on non-existsent column. Check Fail. Return original (empty)
++      String[] putFams5 = {"info",           "stat",    "stat",   "stat",  "ver"};
++      String[] putCols5 = {"info2",          "space",   "used",   "left",  "tag"};
++      String[] putVals5 = {"info555",        "7T",      "2T",     "5T",    "tag555"};
++      String[] delCols5 = {"info", "ver", "stat:left"};
++      pair = client.checkAndMutateAndGetRow(tableName, rowKey1, "stat", "space", CompareOp.LESS, "8T",
++               putFams5, putCols5, putVals5, delCols5);
++      ret = client.checkPair(pair, new Boolean(false), checkRowFams4, checkRowCols4, checkRowVals4);
++      if(!ret)
++      {
++        System.out.println(getClass().getName() + " FAIL: Test-5, checkPair failed");
++        return false;
++      }
++
++      String[] checkRowFams5 = {};
++      String[] checkRowCols5 = {};
++      String[] checkRowVals5 = {};
++      ret = client.checkRow(tableName, rowKey1, checkRowFams5, checkRowCols5, checkRowVals5);
++      if(!ret)
++      {
++        System.out.println(getClass().getName() + " FAIL: Test-5, checkRow failed");
++        return false;
++      }
++
++
++      //Test6: check on non-existsent column. Check succeeded. Return original (empty)
++      String[] putFams6 = {"info",           "stat",    "stat",   "stat",  "ver"};
++      String[] putCols6 = {"info2",          "space",   "used",   "left",  "tag"};
++      String[] putVals6 = {"info666",        "7T",      "2T",     "5T",    "tag666"};
++      String[] delCols6 = {"stat"};
++      pair = client.checkAndMutateAndGetRow(tableName, rowKey1, "stat", "space", CompareOp.GREATER_OR_EQUAL, "8T",
++               putFams6, putCols6, putVals6, delCols6);
++      ret = client.checkPair(pair, new Boolean(true), checkRowFams5, checkRowCols5, checkRowVals5);
++      if(!ret)
++      {
++        System.out.println(getClass().getName() + " FAIL: Test-6, checkPair failed");
++        return false;
++      }
++
++      String[] checkRowFams6 = {"info",           "stat",    "stat",   "stat",  "ver"};
++      String[] checkRowCols6 = {"info2",          "space",   "used",   "left",  "tag"};
++      String[] checkRowVals6 = {"info666",        null,      null,     null,    "tag666"};
++      ret = client.checkRow(tableName, rowKey1, checkRowFams6, checkRowCols6, checkRowVals6);
++      if(!ret)
++      {
++        System.out.println(getClass().getName() + " FAIL: Test-6, checkRow failed");
++        return false;
++      }
++
++
++      //Test7: check on existsent column. Check failed. Return original (non empty)
++      String[] putFams7 = {"info",           "stat",    "stat",   "stat",  "ver"};
++      String[] putCols7 = {"info2",          "space",   "used",   "left",  "tag"};
++      String[] putVals7 = {"xxxxxxx",        "8T",      "7T",     "1T",    "tag777"};
++      String[] delCols7 = {"info"};
++      pair = client.checkAndMutateAndGetRow(tableName, rowKey1, "info", "info2", CompareOp.GREATER_OR_EQUAL, "info566",
++               putFams7, putCols7, putVals7, delCols7);
++      ret = client.checkPair(pair, new Boolean(false), checkRowFams6, checkRowCols6, checkRowVals6);
++      if(!ret)
++      {
++        System.out.println(getClass().getName() + " FAIL: Test-7, checkPair failed");
++        return false;
++      }
++
++      String[] checkRowFams7 = {"info",           "stat",    "stat",   "stat",  "ver"};
++      String[] checkRowCols7 = {"info2",          "space",   "used",   "left",  "tag"};
++      String[] checkRowVals7 = {"info666",        null,      null,     null,    "tag666"};
++      ret = client.checkRow(tableName, rowKey1, checkRowFams7, checkRowCols7, checkRowVals7);
++      if(!ret)
++      {
++        System.out.println(getClass().getName() + " FAIL: Test-7, checkRow failed");
++        return false;
++      }
++
++      client.close();
++
++      return true;
++    }
++    catch(IOException e)
++    {
++      e.printStackTrace();
++    }
++
++    return false;
++  }
++}
+Index: DnionTest/src/com/dnion/hclient/HClient.java
+===================================================================
+--- DnionTest/src/com/dnion/hclient/HClient.java	(revision 0)
++++ DnionTest/src/com/dnion/hclient/HClient.java	(revision 705)
+@@ -0,0 +1,514 @@
++package com.dnion.hclient;
++
++import java.util.Map;
++import java.util.HashMap;
++
++import org.apache.hadoop.hbase.util.Pair;
++
++import java.io.IOException;
++
++import org.apache.hadoop.conf.Configuration;
++import org.apache.hadoop.fs.Path;
++import org.apache.hadoop.hbase.HBaseConfiguration;
++import org.apache.hadoop.hbase.HColumnDescriptor;
++import org.apache.hadoop.hbase.HConstants;
++import org.apache.hadoop.hbase.HTableDescriptor;
++import org.apache.hadoop.hbase.TableName;
++import org.apache.hadoop.hbase.client.Admin;
++import org.apache.hadoop.hbase.client.Connection;
++import org.apache.hadoop.hbase.client.ConnectionFactory;
++import org.apache.hadoop.hbase.client.Table;
++import org.apache.hadoop.hbase.client.Put;
++import org.apache.hadoop.hbase.client.Get;
++import org.apache.hadoop.hbase.client.Delete;
++import org.apache.hadoop.hbase.client.Result;
++import org.apache.hadoop.hbase.Cell;
++import org.apache.hadoop.hbase.CellUtil;
++import org.apache.hadoop.hbase.io.compress.Compression.Algorithm;
++import org.apache.hadoop.hbase.util.Bytes;
++
++import org.apache.hadoop.hbase.filter.CompareFilter;
++import org.apache.hadoop.hbase.filter.CompareFilter.CompareOp;
++import org.apache.hadoop.hbase.client.RowMutations;
++
++public class HClient 
++{
++  private Connection  conn  = null;
++  private Admin       admin = null;
++
++  private boolean tableExists(TableName tname) throws IOException
++  {
++    if(admin.tableExists(tname))
++    {
++      return true;
++    }
++    return false;
++  }
++
++  private Map<String, String> resultToMap(Result result)
++  {
++    Map<String, String> map = new HashMap<String,String>();
++
++    Cell[] cells = result.rawCells();
++    for(Cell c:cells)
++    {
++      String fam = new String(CellUtil.cloneFamily(c));
++      String col = new String(CellUtil.cloneQualifier(c));
++      String val = new String(CellUtil.cloneValue(c));
++
++      map.put((fam+":"+col), val);
++    }
++
++    return map;
++  }
++
++  private Put makePut(String rowKey, String[] columns, String[] qualifiers, String[] values)
++  {
++    if(columns.length!=qualifiers.length || columns.length!=values.length)
++    {
++      System.out.println("columns, qualifiers and values should have the same length!");
++      return null;
++    }
++
++    Put put = new Put(Bytes.toBytes(rowKey));
++    for (int i=0; i<columns.length; i++)
++    {
++      put.addColumn(Bytes.toBytes(columns[i]), Bytes.toBytes(qualifiers[i]), Bytes.toBytes(values[i]));
++    }
++    return put;
++  }
++
++  private Delete makeDelete(String rowKey, String[] delCols)
++  {
++    Delete del = new Delete(Bytes.toBytes(rowKey));
++
++    for (int i=0; i<delCols.length; ++i)
++    {
++      int pColon = delCols[i].indexOf(":");
++      String fam = null;
++      String col = null;
++      if (pColon == -1)
++      {
++        fam = delCols[i];
++      }
++      else
++      {
++        fam = delCols[i].substring(0, pColon);
++        col = delCols[i].substring(pColon+1);
++      }
++
++      if (null != fam &&  null == col)
++      {
++        del.addFamily(Bytes.toBytes(fam));
++      }
++
++      if (null != fam &&  null != col)
++      {
++        del.addColumns(Bytes.toBytes(fam), Bytes.toBytes(col));
++      }
++    }
++
++    return del;
++  }
++
++  public HClient(String hadoopConfDir, String hbaseConfDir) throws IOException
++  {
++    Configuration config = HBaseConfiguration.create();
++    config.addResource(new Path(hadoopConfDir, "core-site.xml"));
++    config.addResource(new Path(hbaseConfDir, "hbase-site.xml"));
++
++    conn = ConnectionFactory.createConnection(config);
++    admin = conn.getAdmin();
++  }
++
++  public HClient() throws IOException
++  {
++    Configuration config = HBaseConfiguration.create();
++
++    config.set("hbase.zookeeper.quorum","192.168.100.131,192.168.100.132,192.168.100.133");  
++    config.set("hbase.zookeeper.property.clientPort","2181");  
++    config.set("zookeeper.znode.parent","/hbase");  
++
++    conn = ConnectionFactory.createConnection(config);
++    admin = conn.getAdmin();
++  }
++
++  public void close() throws IOException
++  {
++    if(null != admin)
++      admin.close();
++
++    if(null != conn)
++      conn.close();
++  }
++
++  public void createTable(String tabName, String[] columns) throws IOException
++  {
++    TableName tname = TableName.valueOf(tabName);
++
++    if (tableExists(tname))
++    {
++      System.out.println("Table "+tabName+" already exists!");
++      return ;
++    }
++
++    HTableDescriptor tabDescrip = new HTableDescriptor(tname);  
++    for(String c:columns)
++    {
++      HColumnDescriptor colDescrip = new HColumnDescriptor(c); 
++      tabDescrip.addFamily(colDescrip);
++    }
++
++    admin.createTable(tabDescrip);
++  }
++
++  public void disableTable(String tabName) throws IOException
++  {
++    TableName tname = TableName.valueOf(tabName);
++
++    if(!tableExists(tname))
++    {
++      System.out.println("Table "+tabName+" does not exist!");
++      return ;
++    }
++    
++    admin.disableTable(tname);
++  }
++
++  public void deleteTable(String tabName) throws IOException
++  {
++    TableName tname = TableName.valueOf(tabName);
++
++    if(!tableExists(tname))
++    {
++      System.out.println("Table "+tabName+" does not exist!");
++      return ;
++    }
++
++    admin.deleteTable(tname);
++  }
++
++  public void putRow(
++                String tabName, String rowKey, 
++                String[] columns, String[] qualifiers, String[] values) throws IOException
++  {
++    TableName tname = TableName.valueOf(tabName);
++    if(!tableExists(tname))
++    {
++      System.out.println("Table "+tabName+" does not exist!");
++      return ;
++    }
++
++    Put put = makePut(rowKey, columns, qualifiers, values);
++    if(put==null)
++    {
++      System.out.println("Invalid arguments for putRow.");
++      return ;
++    }
++
++    Table table = conn.getTable(tname);
++    table.put(put);
++    table.close();
++  }
++
++  public boolean checkAndMutateRow(
++                   String tabName, String rowKey, 
++                   String checkFamily, String checkQualifier, CompareFilter.CompareOp checkOp, String checkValue,
++                   String[] putColumns, String[] putQualifiers, String[] putValues,
++                   String[] delCols) throws IOException
++  {
++
++    TableName tname = TableName.valueOf(tabName);
++    if(!tableExists(tname))
++    {
++      System.out.println("Table "+tabName+" does not exist!");
++      return false;
++    }
++
++    Put put = null;
++    if (putColumns != null && putColumns.length > 0)
++    {
++      put = makePut(rowKey, putColumns, putQualifiers, putValues);
++      if(put==null)
++      {
++        System.out.println("Invalid arguments for checkAndMutateRow.");
++        return false;
++      }
++    }
++
++    Delete del = null;
++    if (delCols != null && delCols.length>0) 
++    {
++      del = makeDelete(rowKey, delCols);
++    }
++
++    RowMutations mutations = new RowMutations(Bytes.toBytes(rowKey));
++    if(put != null)
++    {
++      mutations.add(put);
++    }
++    if(del != null)
++    {
++      mutations.add(del);
++    }
++
++    Table table = conn.getTable(tname);
++    boolean executed = table.checkAndMutate(
++                               Bytes.toBytes(rowKey), 
++                               Bytes.toBytes(checkFamily), Bytes.toBytes(checkQualifier), checkOp, Bytes.toBytes(checkValue),
++                               mutations);
++
++
++    table.close();
++
++    return executed;
++  }
++
++  public Pair<Boolean, Result> checkAndMutateAndGetRow(
++                                 String tabName, String rowKey, String checkFamily, String checkQualifier, CompareFilter.CompareOp checkOp, String checkValue,
++                                 String[] putColumns, String[] putQualifiers, String[] putValues,
++                                 String[] delCols) throws IOException
++  {
++    TableName tname = TableName.valueOf(tabName);
++    if(!tableExists(tname))
++    {
++      System.out.println("Table "+tabName+" does not exist!");
++      return null;
++    }
++
++    Put put = null;
++    if (putColumns != null && putColumns.length > 0)
++    {
++      put = makePut(rowKey, putColumns, putQualifiers, putValues);
++      if(put==null)
++      {
++        System.out.println("Invalid arguments for checkAndMutateAndGetRow.");
++        return null;
++      }
++    }
++
++    Delete del = null;
++    if (delCols != null && delCols.length>0) 
++    {
++      del = makeDelete(rowKey, delCols);
++    }
++
++    RowMutations mutations = new RowMutations(Bytes.toBytes(rowKey));
++
++    if(put != null)
++    {
++      mutations.add(put);
++    }
++    if(del != null)
++    {
++      mutations.add(del);
++    }
++
++    Table table = conn.getTable(tname);
++
++    Pair<Boolean,Result> retPair = table.checkAndMutateAndGetRow(Bytes.toBytes(rowKey), 
++                                           Bytes.toBytes(checkFamily), Bytes.toBytes(checkQualifier), checkOp, Bytes.toBytes(checkValue), 
++                                           mutations);
++
++    table.close();
++
++    return retPair;
++  }
++
++  public Map<String, String> getRow(String tabName, String rowKey, String[] columns) throws IOException
++  {
++    TableName tname = TableName.valueOf(tabName);
++    if(!tableExists(tname))
++    {
++      System.out.println("Table "+tabName+" does not exist!");
++      return null;
++    }
++
++    Table table = conn.getTable(tname);
++
++    System.out.print("====== Get Table:"+tabName+" RowKey:"+rowKey+"  Columns:[ ");
++
++    Get get = new Get(Bytes.toBytes(rowKey));
++    if (columns != null && columns.length>0) 
++    {
++      for (int i=0; i<columns.length; ++i)
++      {
++        int pColon = columns[i].indexOf(":");
++        String fam = null;
++        String col = null;
++        if (pColon == -1)
++        {
++          fam = columns[i];
++          System.out.print(fam+" ");
++        }
++        else
++        {
++          fam = columns[i].substring(0, pColon);
++          col = columns[i].substring(pColon+1);
++          System.out.print(fam+":"+col+ " ");
++        }
++
++        if (null != fam &&  null == col)
++        {
++          get.addFamily(Bytes.toBytes(fam));
++        }
++
++        if (null != fam &&  null != col)
++        {
++          get.addColumn(Bytes.toBytes(fam), Bytes.toBytes(col));
++        }
++      }
++    }
++
++    System.out.println("]");
++
++    Result result = table.get(get);
++    Map<String,String> map = resultToMap(result);
++    table.close();
++
++    return map;
++  }
++
++  public boolean checkRow(String tabName, String rowKey, String[] families, String[] qualifiers, String[] values) throws IOException
++  {
++    Map<String,String> map = getRow(tabName, rowKey, null);
++
++    assert(families.length == qualifiers.length);
++    assert(families.length == values.length);
++
++    for(int i=0; i<families.length; i++)
++    {
++      String fam = families[i];
++      String col = qualifiers[i];
++      String mapKey = fam+":"+col;
++
++      String expected = values[i];
++      String actual = map.get(mapKey);
++
++      if(actual == null && expected == null)
++      {
++        System.out.println(fam+":"+col+" matches, both null");
++        map.remove(mapKey);
++        continue;
++      }
++
++      if(actual == null && expected != null)
++      {
++        System.out.println("ERROR: Expected="+expected+" Actual=null");
++        return false;
++      }
++
++      if(actual != null && expected == null)
++      {
++        System.out.println("ERROR: Expected=null Actual="+actual);
++        return false;
++      }
++
++      if(!actual.equals(expected))
++      {
++        System.out.println("ERROR: Expected="+expected+" Actual="+actual);
++        return false;
++      }
++      else
++      {
++        System.out.println(fam+":"+col+" matches, both "+actual);
++      }
++
++      map.remove(mapKey);
++    }
++
++    if(!map.isEmpty())
++    {
++      System.out.println("ERROR: map should be empty, but it's not!");
++      return false;
++    }
++
++    return true;
++  }
++
++
++  public boolean checkPair(Pair<Boolean,Result> pair, Boolean processed, String[] families, String[] qualifiers, String[] values)
++  {
++    if(pair == null)
++    {
++      System.out.println("ERROR: pair should not be null");
++      return false;
++    }
++
++    Boolean first  = pair.getFirst();
++    if(first == null)
++    {
++      System.out.println("ERROR: First of pair should not be null");
++      return false;
++    }
++    if(!first.equals(processed))
++    {
++      System.out.println("ERROR: Processed:" + first + " Expected:" + processed);
++      return false;
++    }
++
++    Result  second = pair.getSecond();
++    if(second == null)
++    {
++      System.out.println("ERROR: Second of pair should not be null");
++      return false;
++    }
++    Map<String, String> map = resultToMap(second);
++
++    assert(families.length == qualifiers.length);
++    assert(families.length == values.length);
++
++    for(int i=0; i<families.length; i++)
++    {
++      String fam = families[i];
++      String col = qualifiers[i];
++      String mapKey = fam+":"+col;
++
++      String expected = values[i];
++      String actual = map.get(mapKey);
++
++      if(actual == null && expected == null)
++      {
++        System.out.println(fam+":"+col+" matches, both null");
++        map.remove(mapKey);
++        continue;
++      }
++
++      if(actual == null && expected != null)
++      {
++        System.out.println("ERROR: Expected="+expected+" Actual=null");
++        return false;
++      }
++
++      if(actual != null && expected == null)
++      {
++        System.out.println("ERROR: Expected=null Actual="+actual);
++        return false;
++      }
++
++      if(!actual.equals(expected))
++      {
++        System.out.println("ERROR: Expected="+expected+" Actual="+actual);
++        return false;
++      }
++      else
++      {
++        System.out.println(fam+":"+col+" matches, both "+actual);
++      }
++
++      map.remove(mapKey);
++    }
++
++    if(!map.isEmpty())
++    {
++      System.out.println("ERROR: map should be empty, but it is not");
++      return false;
++    }
++    else
++    {
++      System.out.println("map become empty as expected");
++    }
++
++    return true;
++  }
++}
+Index: DnionTest/Makefile
+===================================================================
+--- DnionTest/Makefile	(revision 0)
++++ DnionTest/Makefile	(revision 705)
+@@ -0,0 +1,35 @@
++HBASE_HOME=/usr/local/hbase-1.3.1
++
++CLASSPATH_FOR_COMPILE=./src:$(HBASE_HOME)/lib/hbase-client-1.3.1.jar:$(HBASE_HOME)/lib/hbase-common-1.3.1.jar:$(HBASE_HOME)/lib/hadoop-common-2.7.3.jar
++
++CLASSPATH_FOR_RUN=./src:$(HBASE_HOME)/lib/hbase-client-1.3.1.jar:$(HBASE_HOME)/lib/hbase-common-1.3.1.jar:$(HBASE_HOME)/lib/hadoop-common-2.7.3.jar:$(HBASE_HOME)/lib/commons-logging-1.2.jar:$(HBASE_HOME)/lib/guava-12.0.1.jar:$(HBASE_HOME)/lib/commons-collections-3.2.2.jar:$(HBASE_HOME)/lib/commons-configuration-1.6.jar:$(HBASE_HOME)/lib/commons-lang-2.6.jar:$(HBASE_HOME)/lib/hadoop-auth-2.7.3.jar:$(HBASE_HOME)/lib/slf4j-api-1.7.7.jar:$(HBASE_HOME)/lib/slf4j-log4j12-1.7.5.jar:$(HBASE_HOME)/lib/zookeeper-3.4.6.jar:$(HBASE_HOME)/lib/protobuf-java-2.5.0.jar:$(HBASE_HOME)/lib/hbase-protocol-1.3.1.jar:$(HBASE_HOME)/lib/log4j-1.2.17.jar:$(HBASE_HOME)/lib/htrace-core-3.1.0-incubating.jar:$(HBASE_HOME)/lib/netty-all-4.0.23.Final.jar:$(HBASE_HOME)/lib/metrics-core-2.2.0.jar:$(HBASE_HOME)/lib/commons-codec-1.9.jar
++
++
++all:clean build run 
++
++.PHONY: all
++
++clean:
++	rm -f src/com/dnion/hclient/*.class
++	rm -f src/com/dnion/tests/*.class
++
++build:main_run
++
++main_run:build_check_and_mutate_row build_check_and_mutate_and_get_row src/com/dnion/tests/MainRun.java
++	javac  -Xlint:deprecation -cp $(CLASSPATH_FOR_COMPILE) src/com/dnion/tests/MainRun.java
++
++build_check_and_mutate_row:build_hclient src/com/dnion/tests/IDnionHBaseTest.java src/com/dnion/tests/CheckAndMutateRowTest.java
++	javac  -Xlint:deprecation -cp $(CLASSPATH_FOR_COMPILE) \
++		src/com/dnion/tests/IDnionHBaseTest.java \
++		src/com/dnion/tests/CheckAndMutateRowTest.java
++
++build_check_and_mutate_and_get_row:build_hclient src/com/dnion/tests/IDnionHBaseTest.java src/com/dnion/tests/CheckAndMutateAndGetRowTest.java 
++	javac  -Xlint:deprecation -cp $(CLASSPATH_FOR_COMPILE) \
++		src/com/dnion/tests/IDnionHBaseTest.java \
++		src/com/dnion/tests/CheckAndMutateAndGetRowTest.java 
++
++build_hclient:src/com/dnion/hclient/HClient.java
++	javac  -Xlint:deprecation -cp $(CLASSPATH_FOR_COMPILE) src/com/dnion/hclient/HClient.java
++
++run:
++	java -cp $(CLASSPATH_FOR_RUN) com.dnion.tests.MainRun

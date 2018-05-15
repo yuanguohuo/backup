@@ -1,0 +1,2542 @@
+Index: hbase-thrift/src/main/java/org/apache/hadoop/hbase/thrift2/ThriftHBaseServiceHandler.java
+===================================================================
+--- hbase-thrift/src/main/java/org/apache/hadoop/hbase/thrift2/ThriftHBaseServiceHandler.java	(revision 705)
++++ hbase-thrift/src/main/java/org/apache/hadoop/hbase/thrift2/ThriftHBaseServiceHandler.java	(revision 709)
+@@ -52,6 +52,7 @@
+ import org.apache.hadoop.hbase.classification.InterfaceAudience;
+ import org.apache.hadoop.hbase.client.RegionLocator;
+ import org.apache.hadoop.hbase.client.ResultScanner;
++import org.apache.hadoop.hbase.client.Result;
+ import org.apache.hadoop.hbase.client.Table;
+ import org.apache.hadoop.hbase.security.UserProvider;
+ import org.apache.hadoop.hbase.thrift.ThriftMetrics;
+@@ -66,12 +67,15 @@
+ import org.apache.hadoop.hbase.thrift2.generated.TIncrement;
+ import org.apache.hadoop.hbase.thrift2.generated.TPut;
+ import org.apache.hadoop.hbase.thrift2.generated.TResult;
++import org.apache.hadoop.hbase.thrift2.generated.TProcessedAndResult;
+ import org.apache.hadoop.hbase.thrift2.generated.TRowMutations;
+ import org.apache.hadoop.hbase.thrift2.generated.TScan;
+ import org.apache.hadoop.hbase.util.Bytes;
+ import org.apache.hadoop.hbase.util.ConnectionCache;
+ import org.apache.thrift.TException;
+ 
++import org.apache.hadoop.hbase.util.Pair;
++
+ /**
+  * This class is a glue object that connects Thrift RPC calls to the HBase client API primarily
+  * defined in the HTableInterface.
+@@ -346,13 +350,33 @@
+     try (final Table htable = getTable(table)) {
+       return htable.checkAndMutate(byteBufferToByteArray(row), byteBufferToByteArray(family),
+           byteBufferToByteArray(qualifier), compareOpFromThrift(compareOp),
+-          byteBufferToByteArray(value), rowMutationsFromThrift(rowMutations));
++          (value == null ? null : byteBufferToByteArray(value)), rowMutationsFromThrift(rowMutations));
+     } catch (IOException e) {
+       throw getTIOError(e);
+     }
+   }
+ 
+   @Override
++  public TProcessedAndResult checkAndMutateAndGetRow(
++                               ByteBuffer table, ByteBuffer row, 
++                               ByteBuffer family, ByteBuffer qualifier, TCompareOp compareOp, ByteBuffer value, 
++                               TRowMutations rowMutations) throws TIOError, TException
++  {
++    try (final Table htable = getTable(table))
++    {
++      Pair<Boolean, Result> retPair = htable.checkAndMutateAndGetRow(byteBufferToByteArray(row), 
++                                               byteBufferToByteArray(family),byteBufferToByteArray(qualifier), compareOpFromThrift(compareOp), 
++                                               (value == null ? null : byteBufferToByteArray(value)), 
++                                               rowMutationsFromThrift(rowMutations));
++
++      return resultFromHBase(retPair);
++    } catch (IOException e) {
++      throw getTIOError(e);
++    }
++  }
++
++
++  @Override
+   public boolean checkAndDelete(ByteBuffer table, ByteBuffer row, ByteBuffer family,
+       ByteBuffer qualifier, ByteBuffer value, TDelete deleteSingle) throws TIOError, TException {
+     Table htable = getTable(table);
+Index: hbase-thrift/src/main/java/org/apache/hadoop/hbase/thrift2/ThriftUtilities.java
+===================================================================
+--- hbase-thrift/src/main/java/org/apache/hadoop/hbase/thrift2/ThriftUtilities.java	(revision 705)
++++ hbase-thrift/src/main/java/org/apache/hadoop/hbase/thrift2/ThriftUtilities.java	(revision 709)
+@@ -63,11 +63,13 @@
+ import org.apache.hadoop.hbase.thrift2.generated.TMutation;
+ import org.apache.hadoop.hbase.thrift2.generated.TPut;
+ import org.apache.hadoop.hbase.thrift2.generated.TResult;
++import org.apache.hadoop.hbase.thrift2.generated.TProcessedAndResult;
+ import org.apache.hadoop.hbase.thrift2.generated.TRowMutations;
+ import org.apache.hadoop.hbase.thrift2.generated.TScan;
+ import org.apache.hadoop.hbase.thrift2.generated.TServerName;
+ import org.apache.hadoop.hbase.thrift2.generated.TTimeRange;
+ import org.apache.hadoop.hbase.util.Bytes;
++import org.apache.hadoop.hbase.util.Pair;
+ 
+ @InterfaceAudience.Private
+ public class ThriftUtilities {
+@@ -178,6 +180,55 @@
+   }
+ 
+   /**
++   * Creates a {@link TProcessedAndResult} (Thrift) from a {@link Pair<Boolean, Result>} (HBase).
++   *
++   * @param in the <code>Pair<Boolean, Result></code> to convert
++   *
++   * @return converted result, returns an empty result if the input is <code>null</code>
++   */
++  public static TProcessedAndResult resultFromHBase(Pair<Boolean, Result> in)
++  {
++    TProcessedAndResult out = new TProcessedAndResult();
++
++    //1. convert 'First' of the Pair;
++    Boolean processed = in.getFirst();
++    assert(processed != null); //Yuanguo: processed should never be null;
++    out.setProcessed(processed);
++
++    //2. convert 'Second' of the Pair;
++    Result  hResult = in.getSecond(); 
++    assert(hResult != null);   //Yuanguo: hResult should never be null;
++
++    TResult tResult = new TResult();
++    Cell[] raw = hResult.rawCells();
++    byte[] row = hResult.getRow();
++    if (row != null)
++    {
++      tResult.setRow(hResult.getRow());
++    }
++    List<TColumnValue> columnValues = new ArrayList<TColumnValue>();
++    for (Cell kv : raw)
++    {
++      TColumnValue col = new TColumnValue();
++      col.setFamily(CellUtil.cloneFamily(kv));
++      col.setQualifier(CellUtil.cloneQualifier(kv));
++      col.setTimestamp(kv.getTimestamp());
++      col.setValue(CellUtil.cloneValue(kv));
++      if (kv.getTagsLength() > 0)
++      {
++        col.setTags(CellUtil.getTagArray(kv));
++      }
++      columnValues.add(col);
++    }
++    tResult.setColumnValues(columnValues);
++
++    out.setResult(tResult);
++
++    return out;
++  }
++
++
++  /**
+    * Converts multiple {@link Result}s (HBase) into a list of {@link TResult}s (Thrift).
+    *
+    * @param in array of <code>Result</code>s to convert
+Index: hbase-thrift/src/main/java/org/apache/hadoop/hbase/thrift2/generated/THBaseService.java
+===================================================================
+--- hbase-thrift/src/main/java/org/apache/hadoop/hbase/thrift2/generated/THBaseService.java	(revision 705)
++++ hbase-thrift/src/main/java/org/apache/hadoop/hbase/thrift2/generated/THBaseService.java	(revision 709)
+@@ -34,7 +34,7 @@
+ import org.slf4j.LoggerFactory;
+ 
+ @SuppressWarnings({"cast", "rawtypes", "serial", "unchecked"})
+-@Generated(value = "Autogenerated by Thrift Compiler (0.9.3)", date = "2016-05-27")
++@Generated(value = "Autogenerated by Thrift Compiler (0.9.3)", date = "2017-06-06")
+ public class THBaseService {
+ 
+   public interface Iface {
+@@ -270,6 +270,28 @@
+      */
+     public boolean checkAndMutate(ByteBuffer table, ByteBuffer row, ByteBuffer family, ByteBuffer qualifier, TCompareOp compareOp, ByteBuffer value, TRowMutations rowMutations) throws TIOError, org.apache.thrift.TException;
+ 
++    /**
++     * The same as checkAndMutate, get return the original row at the same time.
++     * 
++     * @return true if the row was mutated, false otherwise
++     * 
++     * @param table to check in and delete from
++     * 
++     * @param row row to check
++     * 
++     * @param family column family to check
++     * 
++     * @param qualifier column qualifier to check
++     * 
++     * @param compareOp comparison to make on the value
++     * 
++     * @param value the expected value to be compared against, if not provided the
++     * check is for the non-existence of the column in question
++     * 
++     * @param rowMutations row mutations to execute if the value matches
++     */
++    public TProcessedAndResult checkAndMutateAndGetRow(ByteBuffer table, ByteBuffer row, ByteBuffer family, ByteBuffer qualifier, TCompareOp compareOp, ByteBuffer value, TRowMutations rowMutations) throws TIOError, org.apache.thrift.TException;
++
+   }
+ 
+   public interface AsyncIface {
+@@ -312,6 +334,8 @@
+ 
+     public void checkAndMutate(ByteBuffer table, ByteBuffer row, ByteBuffer family, ByteBuffer qualifier, TCompareOp compareOp, ByteBuffer value, TRowMutations rowMutations, org.apache.thrift.async.AsyncMethodCallback resultHandler) throws org.apache.thrift.TException;
+ 
++    public void checkAndMutateAndGetRow(ByteBuffer table, ByteBuffer row, ByteBuffer family, ByteBuffer qualifier, TCompareOp compareOp, ByteBuffer value, TRowMutations rowMutations, org.apache.thrift.async.AsyncMethodCallback resultHandler) throws org.apache.thrift.TException;
++
+   }
+ 
+   public static class Client extends org.apache.thrift.TServiceClient implements Iface {
+@@ -851,6 +875,38 @@
+       throw new org.apache.thrift.TApplicationException(org.apache.thrift.TApplicationException.MISSING_RESULT, "checkAndMutate failed: unknown result");
+     }
+ 
++    public TProcessedAndResult checkAndMutateAndGetRow(ByteBuffer table, ByteBuffer row, ByteBuffer family, ByteBuffer qualifier, TCompareOp compareOp, ByteBuffer value, TRowMutations rowMutations) throws TIOError, org.apache.thrift.TException
++    {
++      send_checkAndMutateAndGetRow(table, row, family, qualifier, compareOp, value, rowMutations);
++      return recv_checkAndMutateAndGetRow();
++    }
++
++    public void send_checkAndMutateAndGetRow(ByteBuffer table, ByteBuffer row, ByteBuffer family, ByteBuffer qualifier, TCompareOp compareOp, ByteBuffer value, TRowMutations rowMutations) throws org.apache.thrift.TException
++    {
++      checkAndMutateAndGetRow_args args = new checkAndMutateAndGetRow_args();
++      args.setTable(table);
++      args.setRow(row);
++      args.setFamily(family);
++      args.setQualifier(qualifier);
++      args.setCompareOp(compareOp);
++      args.setValue(value);
++      args.setRowMutations(rowMutations);
++      sendBase("checkAndMutateAndGetRow", args);
++    }
++
++    public TProcessedAndResult recv_checkAndMutateAndGetRow() throws TIOError, org.apache.thrift.TException
++    {
++      checkAndMutateAndGetRow_result result = new checkAndMutateAndGetRow_result();
++      receiveBase(result, "checkAndMutateAndGetRow");
++      if (result.isSetSuccess()) {
++        return result.success;
++      }
++      if (result.io != null) {
++        throw result.io;
++      }
++      throw new org.apache.thrift.TApplicationException(org.apache.thrift.TApplicationException.MISSING_RESULT, "checkAndMutateAndGetRow failed: unknown result");
++    }
++
+   }
+   public static class AsyncClient extends org.apache.thrift.async.TAsyncClient implements AsyncIface {
+     public static class Factory implements org.apache.thrift.async.TAsyncClientFactory<AsyncClient> {
+@@ -1573,6 +1629,56 @@
+       }
+     }
+ 
++    public void checkAndMutateAndGetRow(ByteBuffer table, ByteBuffer row, ByteBuffer family, ByteBuffer qualifier, TCompareOp compareOp, ByteBuffer value, TRowMutations rowMutations, org.apache.thrift.async.AsyncMethodCallback resultHandler) throws org.apache.thrift.TException {
++      checkReady();
++      checkAndMutateAndGetRow_call method_call = new checkAndMutateAndGetRow_call(table, row, family, qualifier, compareOp, value, rowMutations, resultHandler, this, ___protocolFactory, ___transport);
++      this.___currentMethod = method_call;
++      ___manager.call(method_call);
++    }
++
++    public static class checkAndMutateAndGetRow_call extends org.apache.thrift.async.TAsyncMethodCall {
++      private ByteBuffer table;
++      private ByteBuffer row;
++      private ByteBuffer family;
++      private ByteBuffer qualifier;
++      private TCompareOp compareOp;
++      private ByteBuffer value;
++      private TRowMutations rowMutations;
++      public checkAndMutateAndGetRow_call(ByteBuffer table, ByteBuffer row, ByteBuffer family, ByteBuffer qualifier, TCompareOp compareOp, ByteBuffer value, TRowMutations rowMutations, org.apache.thrift.async.AsyncMethodCallback resultHandler, org.apache.thrift.async.TAsyncClient client, org.apache.thrift.protocol.TProtocolFactory protocolFactory, org.apache.thrift.transport.TNonblockingTransport transport) throws org.apache.thrift.TException {
++        super(client, protocolFactory, transport, resultHandler, false);
++        this.table = table;
++        this.row = row;
++        this.family = family;
++        this.qualifier = qualifier;
++        this.compareOp = compareOp;
++        this.value = value;
++        this.rowMutations = rowMutations;
++      }
++
++      public void write_args(org.apache.thrift.protocol.TProtocol prot) throws org.apache.thrift.TException {
++        prot.writeMessageBegin(new org.apache.thrift.protocol.TMessage("checkAndMutateAndGetRow", org.apache.thrift.protocol.TMessageType.CALL, 0));
++        checkAndMutateAndGetRow_args args = new checkAndMutateAndGetRow_args();
++        args.setTable(table);
++        args.setRow(row);
++        args.setFamily(family);
++        args.setQualifier(qualifier);
++        args.setCompareOp(compareOp);
++        args.setValue(value);
++        args.setRowMutations(rowMutations);
++        args.write(prot);
++        prot.writeMessageEnd();
++      }
++
++      public TProcessedAndResult getResult() throws TIOError, org.apache.thrift.TException {
++        if (getState() != org.apache.thrift.async.TAsyncMethodCall.State.RESPONSE_READ) {
++          throw new IllegalStateException("Method call not finished!");
++        }
++        org.apache.thrift.transport.TMemoryInputTransport memoryTransport = new org.apache.thrift.transport.TMemoryInputTransport(getFrameBuffer().array());
++        org.apache.thrift.protocol.TProtocol prot = client.getProtocolFactory().getProtocol(memoryTransport);
++        return (new Client(prot)).recv_checkAndMutateAndGetRow();
++      }
++    }
++
+   }
+ 
+   public static class Processor<I extends Iface> extends org.apache.thrift.TBaseProcessor<I> implements org.apache.thrift.TProcessor {
+@@ -1605,6 +1711,7 @@
+       processMap.put("getRegionLocation", new getRegionLocation());
+       processMap.put("getAllRegionLocations", new getAllRegionLocations());
+       processMap.put("checkAndMutate", new checkAndMutate());
++      processMap.put("checkAndMutateAndGetRow", new checkAndMutateAndGetRow());
+       return processMap;
+     }
+ 
+@@ -2073,6 +2180,30 @@
+       }
+     }
+ 
++    public static class checkAndMutateAndGetRow<I extends Iface> extends org.apache.thrift.ProcessFunction<I, checkAndMutateAndGetRow_args> {
++      public checkAndMutateAndGetRow() {
++        super("checkAndMutateAndGetRow");
++      }
++
++      public checkAndMutateAndGetRow_args getEmptyArgsInstance() {
++        return new checkAndMutateAndGetRow_args();
++      }
++
++      protected boolean isOneway() {
++        return false;
++      }
++
++      public checkAndMutateAndGetRow_result getResult(I iface, checkAndMutateAndGetRow_args args) throws org.apache.thrift.TException {
++        checkAndMutateAndGetRow_result result = new checkAndMutateAndGetRow_result();
++        try {
++          result.success = iface.checkAndMutateAndGetRow(args.table, args.row, args.family, args.qualifier, args.compareOp, args.value, args.rowMutations);
++        } catch (TIOError io) {
++          result.io = io;
++        }
++        return result;
++      }
++    }
++
+   }
+ 
+   public static class AsyncProcessor<I extends AsyncIface> extends org.apache.thrift.TBaseAsyncProcessor<I> {
+@@ -2105,6 +2236,7 @@
+       processMap.put("getRegionLocation", new getRegionLocation());
+       processMap.put("getAllRegionLocations", new getAllRegionLocations());
+       processMap.put("checkAndMutate", new checkAndMutate());
++      processMap.put("checkAndMutateAndGetRow", new checkAndMutateAndGetRow());
+       return processMap;
+     }
+ 
+@@ -3201,6 +3333,63 @@
+       }
+     }
+ 
++    public static class checkAndMutateAndGetRow<I extends AsyncIface> extends org.apache.thrift.AsyncProcessFunction<I, checkAndMutateAndGetRow_args, TProcessedAndResult> {
++      public checkAndMutateAndGetRow() {
++        super("checkAndMutateAndGetRow");
++      }
++
++      public checkAndMutateAndGetRow_args getEmptyArgsInstance() {
++        return new checkAndMutateAndGetRow_args();
++      }
++
++      public AsyncMethodCallback<TProcessedAndResult> getResultHandler(final AsyncFrameBuffer fb, final int seqid) {
++        final org.apache.thrift.AsyncProcessFunction fcall = this;
++        return new AsyncMethodCallback<TProcessedAndResult>() { 
++          public void onComplete(TProcessedAndResult o) {
++            checkAndMutateAndGetRow_result result = new checkAndMutateAndGetRow_result();
++            result.success = o;
++            try {
++              fcall.sendResponse(fb,result, org.apache.thrift.protocol.TMessageType.REPLY,seqid);
++              return;
++            } catch (Exception e) {
++              LOGGER.error("Exception writing to internal frame buffer", e);
++            }
++            fb.close();
++          }
++          public void onError(Exception e) {
++            byte msgType = org.apache.thrift.protocol.TMessageType.REPLY;
++            org.apache.thrift.TBase msg;
++            checkAndMutateAndGetRow_result result = new checkAndMutateAndGetRow_result();
++            if (e instanceof TIOError) {
++                        result.io = (TIOError) e;
++                        result.setIoIsSet(true);
++                        msg = result;
++            }
++             else 
++            {
++              msgType = org.apache.thrift.protocol.TMessageType.EXCEPTION;
++              msg = (org.apache.thrift.TBase)new org.apache.thrift.TApplicationException(org.apache.thrift.TApplicationException.INTERNAL_ERROR, e.getMessage());
++            }
++            try {
++              fcall.sendResponse(fb,msg,msgType,seqid);
++              return;
++            } catch (Exception ex) {
++              LOGGER.error("Exception writing to internal frame buffer", ex);
++            }
++            fb.close();
++          }
++        };
++      }
++
++      protected boolean isOneway() {
++        return false;
++      }
++
++      public void start(I iface, checkAndMutateAndGetRow_args args, org.apache.thrift.async.AsyncMethodCallback<TProcessedAndResult> resultHandler) throws TException {
++        iface.checkAndMutateAndGetRow(args.table, args.row, args.family, args.qualifier, args.compareOp, args.value, args.rowMutations,resultHandler);
++      }
++    }
++
+   }
+ 
+   public static class exists_args implements org.apache.thrift.TBase<exists_args, exists_args._Fields>, java.io.Serializable, Cloneable, Comparable<exists_args>   {
+@@ -23212,4 +23401,1595 @@
+ 
+   }
+ 
++  public static class checkAndMutateAndGetRow_args implements org.apache.thrift.TBase<checkAndMutateAndGetRow_args, checkAndMutateAndGetRow_args._Fields>, java.io.Serializable, Cloneable, Comparable<checkAndMutateAndGetRow_args>   {
++    private static final org.apache.thrift.protocol.TStruct STRUCT_DESC = new org.apache.thrift.protocol.TStruct("checkAndMutateAndGetRow_args");
++
++    private static final org.apache.thrift.protocol.TField TABLE_FIELD_DESC = new org.apache.thrift.protocol.TField("table", org.apache.thrift.protocol.TType.STRING, (short)1);
++    private static final org.apache.thrift.protocol.TField ROW_FIELD_DESC = new org.apache.thrift.protocol.TField("row", org.apache.thrift.protocol.TType.STRING, (short)2);
++    private static final org.apache.thrift.protocol.TField FAMILY_FIELD_DESC = new org.apache.thrift.protocol.TField("family", org.apache.thrift.protocol.TType.STRING, (short)3);
++    private static final org.apache.thrift.protocol.TField QUALIFIER_FIELD_DESC = new org.apache.thrift.protocol.TField("qualifier", org.apache.thrift.protocol.TType.STRING, (short)4);
++    private static final org.apache.thrift.protocol.TField COMPARE_OP_FIELD_DESC = new org.apache.thrift.protocol.TField("compareOp", org.apache.thrift.protocol.TType.I32, (short)5);
++    private static final org.apache.thrift.protocol.TField VALUE_FIELD_DESC = new org.apache.thrift.protocol.TField("value", org.apache.thrift.protocol.TType.STRING, (short)6);
++    private static final org.apache.thrift.protocol.TField ROW_MUTATIONS_FIELD_DESC = new org.apache.thrift.protocol.TField("rowMutations", org.apache.thrift.protocol.TType.STRUCT, (short)7);
++
++    private static final Map<Class<? extends IScheme>, SchemeFactory> schemes = new HashMap<Class<? extends IScheme>, SchemeFactory>();
++    static {
++      schemes.put(StandardScheme.class, new checkAndMutateAndGetRow_argsStandardSchemeFactory());
++      schemes.put(TupleScheme.class, new checkAndMutateAndGetRow_argsTupleSchemeFactory());
++    }
++
++    /**
++     * to check in and delete from
++     */
++    public ByteBuffer table; // required
++    /**
++     * row to check
++     */
++    public ByteBuffer row; // required
++    /**
++     * column family to check
++     */
++    public ByteBuffer family; // required
++    /**
++     * column qualifier to check
++     */
++    public ByteBuffer qualifier; // required
++    /**
++     * comparison to make on the value
++     * 
++     * @see TCompareOp
++     */
++    public TCompareOp compareOp; // required
++    /**
++     * the expected value to be compared against, if not provided the
++     * check is for the non-existence of the column in question
++     */
++    public ByteBuffer value; // required
++    /**
++     * row mutations to execute if the value matches
++     */
++    public TRowMutations rowMutations; // required
++
++    /** The set of fields this struct contains, along with convenience methods for finding and manipulating them. */
++    public enum _Fields implements org.apache.thrift.TFieldIdEnum {
++      /**
++       * to check in and delete from
++       */
++      TABLE((short)1, "table"),
++      /**
++       * row to check
++       */
++      ROW((short)2, "row"),
++      /**
++       * column family to check
++       */
++      FAMILY((short)3, "family"),
++      /**
++       * column qualifier to check
++       */
++      QUALIFIER((short)4, "qualifier"),
++      /**
++       * comparison to make on the value
++       * 
++       * @see TCompareOp
++       */
++      COMPARE_OP((short)5, "compareOp"),
++      /**
++       * the expected value to be compared against, if not provided the
++       * check is for the non-existence of the column in question
++       */
++      VALUE((short)6, "value"),
++      /**
++       * row mutations to execute if the value matches
++       */
++      ROW_MUTATIONS((short)7, "rowMutations");
++
++      private static final Map<String, _Fields> byName = new HashMap<String, _Fields>();
++
++      static {
++        for (_Fields field : EnumSet.allOf(_Fields.class)) {
++          byName.put(field.getFieldName(), field);
++        }
++      }
++
++      /**
++       * Find the _Fields constant that matches fieldId, or null if its not found.
++       */
++      public static _Fields findByThriftId(int fieldId) {
++        switch(fieldId) {
++          case 1: // TABLE
++            return TABLE;
++          case 2: // ROW
++            return ROW;
++          case 3: // FAMILY
++            return FAMILY;
++          case 4: // QUALIFIER
++            return QUALIFIER;
++          case 5: // COMPARE_OP
++            return COMPARE_OP;
++          case 6: // VALUE
++            return VALUE;
++          case 7: // ROW_MUTATIONS
++            return ROW_MUTATIONS;
++          default:
++            return null;
++        }
++      }
++
++      /**
++       * Find the _Fields constant that matches fieldId, throwing an exception
++       * if it is not found.
++       */
++      public static _Fields findByThriftIdOrThrow(int fieldId) {
++        _Fields fields = findByThriftId(fieldId);
++        if (fields == null) throw new IllegalArgumentException("Field " + fieldId + " doesn't exist!");
++        return fields;
++      }
++
++      /**
++       * Find the _Fields constant that matches name, or null if its not found.
++       */
++      public static _Fields findByName(String name) {
++        return byName.get(name);
++      }
++
++      private final short _thriftId;
++      private final String _fieldName;
++
++      _Fields(short thriftId, String fieldName) {
++        _thriftId = thriftId;
++        _fieldName = fieldName;
++      }
++
++      public short getThriftFieldId() {
++        return _thriftId;
++      }
++
++      public String getFieldName() {
++        return _fieldName;
++      }
++    }
++
++    // isset id assignments
++    public static final Map<_Fields, org.apache.thrift.meta_data.FieldMetaData> metaDataMap;
++    static {
++      Map<_Fields, org.apache.thrift.meta_data.FieldMetaData> tmpMap = new EnumMap<_Fields, org.apache.thrift.meta_data.FieldMetaData>(_Fields.class);
++      tmpMap.put(_Fields.TABLE, new org.apache.thrift.meta_data.FieldMetaData("table", org.apache.thrift.TFieldRequirementType.REQUIRED, 
++          new org.apache.thrift.meta_data.FieldValueMetaData(org.apache.thrift.protocol.TType.STRING          , true)));
++      tmpMap.put(_Fields.ROW, new org.apache.thrift.meta_data.FieldMetaData("row", org.apache.thrift.TFieldRequirementType.REQUIRED, 
++          new org.apache.thrift.meta_data.FieldValueMetaData(org.apache.thrift.protocol.TType.STRING          , true)));
++      tmpMap.put(_Fields.FAMILY, new org.apache.thrift.meta_data.FieldMetaData("family", org.apache.thrift.TFieldRequirementType.REQUIRED, 
++          new org.apache.thrift.meta_data.FieldValueMetaData(org.apache.thrift.protocol.TType.STRING          , true)));
++      tmpMap.put(_Fields.QUALIFIER, new org.apache.thrift.meta_data.FieldMetaData("qualifier", org.apache.thrift.TFieldRequirementType.REQUIRED, 
++          new org.apache.thrift.meta_data.FieldValueMetaData(org.apache.thrift.protocol.TType.STRING          , true)));
++      tmpMap.put(_Fields.COMPARE_OP, new org.apache.thrift.meta_data.FieldMetaData("compareOp", org.apache.thrift.TFieldRequirementType.REQUIRED, 
++          new org.apache.thrift.meta_data.EnumMetaData(org.apache.thrift.protocol.TType.ENUM, TCompareOp.class)));
++      tmpMap.put(_Fields.VALUE, new org.apache.thrift.meta_data.FieldMetaData("value", org.apache.thrift.TFieldRequirementType.DEFAULT, 
++          new org.apache.thrift.meta_data.FieldValueMetaData(org.apache.thrift.protocol.TType.STRING          , true)));
++      tmpMap.put(_Fields.ROW_MUTATIONS, new org.apache.thrift.meta_data.FieldMetaData("rowMutations", org.apache.thrift.TFieldRequirementType.REQUIRED, 
++          new org.apache.thrift.meta_data.StructMetaData(org.apache.thrift.protocol.TType.STRUCT, TRowMutations.class)));
++      metaDataMap = Collections.unmodifiableMap(tmpMap);
++      org.apache.thrift.meta_data.FieldMetaData.addStructMetaDataMap(checkAndMutateAndGetRow_args.class, metaDataMap);
++    }
++
++    public checkAndMutateAndGetRow_args() {
++    }
++
++    public checkAndMutateAndGetRow_args(
++      ByteBuffer table,
++      ByteBuffer row,
++      ByteBuffer family,
++      ByteBuffer qualifier,
++      TCompareOp compareOp,
++      ByteBuffer value,
++      TRowMutations rowMutations)
++    {
++      this();
++      this.table = org.apache.thrift.TBaseHelper.copyBinary(table);
++      this.row = org.apache.thrift.TBaseHelper.copyBinary(row);
++      this.family = org.apache.thrift.TBaseHelper.copyBinary(family);
++      this.qualifier = org.apache.thrift.TBaseHelper.copyBinary(qualifier);
++      this.compareOp = compareOp;
++      this.value = org.apache.thrift.TBaseHelper.copyBinary(value);
++      this.rowMutations = rowMutations;
++    }
++
++    /**
++     * Performs a deep copy on <i>other</i>.
++     */
++    public checkAndMutateAndGetRow_args(checkAndMutateAndGetRow_args other) {
++      if (other.isSetTable()) {
++        this.table = org.apache.thrift.TBaseHelper.copyBinary(other.table);
++      }
++      if (other.isSetRow()) {
++        this.row = org.apache.thrift.TBaseHelper.copyBinary(other.row);
++      }
++      if (other.isSetFamily()) {
++        this.family = org.apache.thrift.TBaseHelper.copyBinary(other.family);
++      }
++      if (other.isSetQualifier()) {
++        this.qualifier = org.apache.thrift.TBaseHelper.copyBinary(other.qualifier);
++      }
++      if (other.isSetCompareOp()) {
++        this.compareOp = other.compareOp;
++      }
++      if (other.isSetValue()) {
++        this.value = org.apache.thrift.TBaseHelper.copyBinary(other.value);
++      }
++      if (other.isSetRowMutations()) {
++        this.rowMutations = new TRowMutations(other.rowMutations);
++      }
++    }
++
++    public checkAndMutateAndGetRow_args deepCopy() {
++      return new checkAndMutateAndGetRow_args(this);
++    }
++
++    @Override
++    public void clear() {
++      this.table = null;
++      this.row = null;
++      this.family = null;
++      this.qualifier = null;
++      this.compareOp = null;
++      this.value = null;
++      this.rowMutations = null;
++    }
++
++    /**
++     * to check in and delete from
++     */
++    public byte[] getTable() {
++      setTable(org.apache.thrift.TBaseHelper.rightSize(table));
++      return table == null ? null : table.array();
++    }
++
++    public ByteBuffer bufferForTable() {
++      return org.apache.thrift.TBaseHelper.copyBinary(table);
++    }
++
++    /**
++     * to check in and delete from
++     */
++    public checkAndMutateAndGetRow_args setTable(byte[] table) {
++      this.table = table == null ? (ByteBuffer)null : ByteBuffer.wrap(Arrays.copyOf(table, table.length));
++      return this;
++    }
++
++    public checkAndMutateAndGetRow_args setTable(ByteBuffer table) {
++      this.table = org.apache.thrift.TBaseHelper.copyBinary(table);
++      return this;
++    }
++
++    public void unsetTable() {
++      this.table = null;
++    }
++
++    /** Returns true if field table is set (has been assigned a value) and false otherwise */
++    public boolean isSetTable() {
++      return this.table != null;
++    }
++
++    public void setTableIsSet(boolean value) {
++      if (!value) {
++        this.table = null;
++      }
++    }
++
++    /**
++     * row to check
++     */
++    public byte[] getRow() {
++      setRow(org.apache.thrift.TBaseHelper.rightSize(row));
++      return row == null ? null : row.array();
++    }
++
++    public ByteBuffer bufferForRow() {
++      return org.apache.thrift.TBaseHelper.copyBinary(row);
++    }
++
++    /**
++     * row to check
++     */
++    public checkAndMutateAndGetRow_args setRow(byte[] row) {
++      this.row = row == null ? (ByteBuffer)null : ByteBuffer.wrap(Arrays.copyOf(row, row.length));
++      return this;
++    }
++
++    public checkAndMutateAndGetRow_args setRow(ByteBuffer row) {
++      this.row = org.apache.thrift.TBaseHelper.copyBinary(row);
++      return this;
++    }
++
++    public void unsetRow() {
++      this.row = null;
++    }
++
++    /** Returns true if field row is set (has been assigned a value) and false otherwise */
++    public boolean isSetRow() {
++      return this.row != null;
++    }
++
++    public void setRowIsSet(boolean value) {
++      if (!value) {
++        this.row = null;
++      }
++    }
++
++    /**
++     * column family to check
++     */
++    public byte[] getFamily() {
++      setFamily(org.apache.thrift.TBaseHelper.rightSize(family));
++      return family == null ? null : family.array();
++    }
++
++    public ByteBuffer bufferForFamily() {
++      return org.apache.thrift.TBaseHelper.copyBinary(family);
++    }
++
++    /**
++     * column family to check
++     */
++    public checkAndMutateAndGetRow_args setFamily(byte[] family) {
++      this.family = family == null ? (ByteBuffer)null : ByteBuffer.wrap(Arrays.copyOf(family, family.length));
++      return this;
++    }
++
++    public checkAndMutateAndGetRow_args setFamily(ByteBuffer family) {
++      this.family = org.apache.thrift.TBaseHelper.copyBinary(family);
++      return this;
++    }
++
++    public void unsetFamily() {
++      this.family = null;
++    }
++
++    /** Returns true if field family is set (has been assigned a value) and false otherwise */
++    public boolean isSetFamily() {
++      return this.family != null;
++    }
++
++    public void setFamilyIsSet(boolean value) {
++      if (!value) {
++        this.family = null;
++      }
++    }
++
++    /**
++     * column qualifier to check
++     */
++    public byte[] getQualifier() {
++      setQualifier(org.apache.thrift.TBaseHelper.rightSize(qualifier));
++      return qualifier == null ? null : qualifier.array();
++    }
++
++    public ByteBuffer bufferForQualifier() {
++      return org.apache.thrift.TBaseHelper.copyBinary(qualifier);
++    }
++
++    /**
++     * column qualifier to check
++     */
++    public checkAndMutateAndGetRow_args setQualifier(byte[] qualifier) {
++      this.qualifier = qualifier == null ? (ByteBuffer)null : ByteBuffer.wrap(Arrays.copyOf(qualifier, qualifier.length));
++      return this;
++    }
++
++    public checkAndMutateAndGetRow_args setQualifier(ByteBuffer qualifier) {
++      this.qualifier = org.apache.thrift.TBaseHelper.copyBinary(qualifier);
++      return this;
++    }
++
++    public void unsetQualifier() {
++      this.qualifier = null;
++    }
++
++    /** Returns true if field qualifier is set (has been assigned a value) and false otherwise */
++    public boolean isSetQualifier() {
++      return this.qualifier != null;
++    }
++
++    public void setQualifierIsSet(boolean value) {
++      if (!value) {
++        this.qualifier = null;
++      }
++    }
++
++    /**
++     * comparison to make on the value
++     * 
++     * @see TCompareOp
++     */
++    public TCompareOp getCompareOp() {
++      return this.compareOp;
++    }
++
++    /**
++     * comparison to make on the value
++     * 
++     * @see TCompareOp
++     */
++    public checkAndMutateAndGetRow_args setCompareOp(TCompareOp compareOp) {
++      this.compareOp = compareOp;
++      return this;
++    }
++
++    public void unsetCompareOp() {
++      this.compareOp = null;
++    }
++
++    /** Returns true if field compareOp is set (has been assigned a value) and false otherwise */
++    public boolean isSetCompareOp() {
++      return this.compareOp != null;
++    }
++
++    public void setCompareOpIsSet(boolean value) {
++      if (!value) {
++        this.compareOp = null;
++      }
++    }
++
++    /**
++     * the expected value to be compared against, if not provided the
++     * check is for the non-existence of the column in question
++     */
++    public byte[] getValue() {
++      setValue(org.apache.thrift.TBaseHelper.rightSize(value));
++      return value == null ? null : value.array();
++    }
++
++    public ByteBuffer bufferForValue() {
++      return org.apache.thrift.TBaseHelper.copyBinary(value);
++    }
++
++    /**
++     * the expected value to be compared against, if not provided the
++     * check is for the non-existence of the column in question
++     */
++    public checkAndMutateAndGetRow_args setValue(byte[] value) {
++      this.value = value == null ? (ByteBuffer)null : ByteBuffer.wrap(Arrays.copyOf(value, value.length));
++      return this;
++    }
++
++    public checkAndMutateAndGetRow_args setValue(ByteBuffer value) {
++      this.value = org.apache.thrift.TBaseHelper.copyBinary(value);
++      return this;
++    }
++
++    public void unsetValue() {
++      this.value = null;
++    }
++
++    /** Returns true if field value is set (has been assigned a value) and false otherwise */
++    public boolean isSetValue() {
++      return this.value != null;
++    }
++
++    public void setValueIsSet(boolean value) {
++      if (!value) {
++        this.value = null;
++      }
++    }
++
++    /**
++     * row mutations to execute if the value matches
++     */
++    public TRowMutations getRowMutations() {
++      return this.rowMutations;
++    }
++
++    /**
++     * row mutations to execute if the value matches
++     */
++    public checkAndMutateAndGetRow_args setRowMutations(TRowMutations rowMutations) {
++      this.rowMutations = rowMutations;
++      return this;
++    }
++
++    public void unsetRowMutations() {
++      this.rowMutations = null;
++    }
++
++    /** Returns true if field rowMutations is set (has been assigned a value) and false otherwise */
++    public boolean isSetRowMutations() {
++      return this.rowMutations != null;
++    }
++
++    public void setRowMutationsIsSet(boolean value) {
++      if (!value) {
++        this.rowMutations = null;
++      }
++    }
++
++    public void setFieldValue(_Fields field, Object value) {
++      switch (field) {
++      case TABLE:
++        if (value == null) {
++          unsetTable();
++        } else {
++          setTable((ByteBuffer)value);
++        }
++        break;
++
++      case ROW:
++        if (value == null) {
++          unsetRow();
++        } else {
++          setRow((ByteBuffer)value);
++        }
++        break;
++
++      case FAMILY:
++        if (value == null) {
++          unsetFamily();
++        } else {
++          setFamily((ByteBuffer)value);
++        }
++        break;
++
++      case QUALIFIER:
++        if (value == null) {
++          unsetQualifier();
++        } else {
++          setQualifier((ByteBuffer)value);
++        }
++        break;
++
++      case COMPARE_OP:
++        if (value == null) {
++          unsetCompareOp();
++        } else {
++          setCompareOp((TCompareOp)value);
++        }
++        break;
++
++      case VALUE:
++        if (value == null) {
++          unsetValue();
++        } else {
++          setValue((ByteBuffer)value);
++        }
++        break;
++
++      case ROW_MUTATIONS:
++        if (value == null) {
++          unsetRowMutations();
++        } else {
++          setRowMutations((TRowMutations)value);
++        }
++        break;
++
++      }
++    }
++
++    public Object getFieldValue(_Fields field) {
++      switch (field) {
++      case TABLE:
++        return getTable();
++
++      case ROW:
++        return getRow();
++
++      case FAMILY:
++        return getFamily();
++
++      case QUALIFIER:
++        return getQualifier();
++
++      case COMPARE_OP:
++        return getCompareOp();
++
++      case VALUE:
++        return getValue();
++
++      case ROW_MUTATIONS:
++        return getRowMutations();
++
++      }
++      throw new IllegalStateException();
++    }
++
++    /** Returns true if field corresponding to fieldID is set (has been assigned a value) and false otherwise */
++    public boolean isSet(_Fields field) {
++      if (field == null) {
++        throw new IllegalArgumentException();
++      }
++
++      switch (field) {
++      case TABLE:
++        return isSetTable();
++      case ROW:
++        return isSetRow();
++      case FAMILY:
++        return isSetFamily();
++      case QUALIFIER:
++        return isSetQualifier();
++      case COMPARE_OP:
++        return isSetCompareOp();
++      case VALUE:
++        return isSetValue();
++      case ROW_MUTATIONS:
++        return isSetRowMutations();
++      }
++      throw new IllegalStateException();
++    }
++
++    @Override
++    public boolean equals(Object that) {
++      if (that == null)
++        return false;
++      if (that instanceof checkAndMutateAndGetRow_args)
++        return this.equals((checkAndMutateAndGetRow_args)that);
++      return false;
++    }
++
++    public boolean equals(checkAndMutateAndGetRow_args that) {
++      if (that == null)
++        return false;
++
++      boolean this_present_table = true && this.isSetTable();
++      boolean that_present_table = true && that.isSetTable();
++      if (this_present_table || that_present_table) {
++        if (!(this_present_table && that_present_table))
++          return false;
++        if (!this.table.equals(that.table))
++          return false;
++      }
++
++      boolean this_present_row = true && this.isSetRow();
++      boolean that_present_row = true && that.isSetRow();
++      if (this_present_row || that_present_row) {
++        if (!(this_present_row && that_present_row))
++          return false;
++        if (!this.row.equals(that.row))
++          return false;
++      }
++
++      boolean this_present_family = true && this.isSetFamily();
++      boolean that_present_family = true && that.isSetFamily();
++      if (this_present_family || that_present_family) {
++        if (!(this_present_family && that_present_family))
++          return false;
++        if (!this.family.equals(that.family))
++          return false;
++      }
++
++      boolean this_present_qualifier = true && this.isSetQualifier();
++      boolean that_present_qualifier = true && that.isSetQualifier();
++      if (this_present_qualifier || that_present_qualifier) {
++        if (!(this_present_qualifier && that_present_qualifier))
++          return false;
++        if (!this.qualifier.equals(that.qualifier))
++          return false;
++      }
++
++      boolean this_present_compareOp = true && this.isSetCompareOp();
++      boolean that_present_compareOp = true && that.isSetCompareOp();
++      if (this_present_compareOp || that_present_compareOp) {
++        if (!(this_present_compareOp && that_present_compareOp))
++          return false;
++        if (!this.compareOp.equals(that.compareOp))
++          return false;
++      }
++
++      boolean this_present_value = true && this.isSetValue();
++      boolean that_present_value = true && that.isSetValue();
++      if (this_present_value || that_present_value) {
++        if (!(this_present_value && that_present_value))
++          return false;
++        if (!this.value.equals(that.value))
++          return false;
++      }
++
++      boolean this_present_rowMutations = true && this.isSetRowMutations();
++      boolean that_present_rowMutations = true && that.isSetRowMutations();
++      if (this_present_rowMutations || that_present_rowMutations) {
++        if (!(this_present_rowMutations && that_present_rowMutations))
++          return false;
++        if (!this.rowMutations.equals(that.rowMutations))
++          return false;
++      }
++
++      return true;
++    }
++
++    @Override
++    public int hashCode() {
++      List<Object> list = new ArrayList<Object>();
++
++      boolean present_table = true && (isSetTable());
++      list.add(present_table);
++      if (present_table)
++        list.add(table);
++
++      boolean present_row = true && (isSetRow());
++      list.add(present_row);
++      if (present_row)
++        list.add(row);
++
++      boolean present_family = true && (isSetFamily());
++      list.add(present_family);
++      if (present_family)
++        list.add(family);
++
++      boolean present_qualifier = true && (isSetQualifier());
++      list.add(present_qualifier);
++      if (present_qualifier)
++        list.add(qualifier);
++
++      boolean present_compareOp = true && (isSetCompareOp());
++      list.add(present_compareOp);
++      if (present_compareOp)
++        list.add(compareOp.getValue());
++
++      boolean present_value = true && (isSetValue());
++      list.add(present_value);
++      if (present_value)
++        list.add(value);
++
++      boolean present_rowMutations = true && (isSetRowMutations());
++      list.add(present_rowMutations);
++      if (present_rowMutations)
++        list.add(rowMutations);
++
++      return list.hashCode();
++    }
++
++    @Override
++    public int compareTo(checkAndMutateAndGetRow_args other) {
++      if (!getClass().equals(other.getClass())) {
++        return getClass().getName().compareTo(other.getClass().getName());
++      }
++
++      int lastComparison = 0;
++
++      lastComparison = Boolean.valueOf(isSetTable()).compareTo(other.isSetTable());
++      if (lastComparison != 0) {
++        return lastComparison;
++      }
++      if (isSetTable()) {
++        lastComparison = org.apache.thrift.TBaseHelper.compareTo(this.table, other.table);
++        if (lastComparison != 0) {
++          return lastComparison;
++        }
++      }
++      lastComparison = Boolean.valueOf(isSetRow()).compareTo(other.isSetRow());
++      if (lastComparison != 0) {
++        return lastComparison;
++      }
++      if (isSetRow()) {
++        lastComparison = org.apache.thrift.TBaseHelper.compareTo(this.row, other.row);
++        if (lastComparison != 0) {
++          return lastComparison;
++        }
++      }
++      lastComparison = Boolean.valueOf(isSetFamily()).compareTo(other.isSetFamily());
++      if (lastComparison != 0) {
++        return lastComparison;
++      }
++      if (isSetFamily()) {
++        lastComparison = org.apache.thrift.TBaseHelper.compareTo(this.family, other.family);
++        if (lastComparison != 0) {
++          return lastComparison;
++        }
++      }
++      lastComparison = Boolean.valueOf(isSetQualifier()).compareTo(other.isSetQualifier());
++      if (lastComparison != 0) {
++        return lastComparison;
++      }
++      if (isSetQualifier()) {
++        lastComparison = org.apache.thrift.TBaseHelper.compareTo(this.qualifier, other.qualifier);
++        if (lastComparison != 0) {
++          return lastComparison;
++        }
++      }
++      lastComparison = Boolean.valueOf(isSetCompareOp()).compareTo(other.isSetCompareOp());
++      if (lastComparison != 0) {
++        return lastComparison;
++      }
++      if (isSetCompareOp()) {
++        lastComparison = org.apache.thrift.TBaseHelper.compareTo(this.compareOp, other.compareOp);
++        if (lastComparison != 0) {
++          return lastComparison;
++        }
++      }
++      lastComparison = Boolean.valueOf(isSetValue()).compareTo(other.isSetValue());
++      if (lastComparison != 0) {
++        return lastComparison;
++      }
++      if (isSetValue()) {
++        lastComparison = org.apache.thrift.TBaseHelper.compareTo(this.value, other.value);
++        if (lastComparison != 0) {
++          return lastComparison;
++        }
++      }
++      lastComparison = Boolean.valueOf(isSetRowMutations()).compareTo(other.isSetRowMutations());
++      if (lastComparison != 0) {
++        return lastComparison;
++      }
++      if (isSetRowMutations()) {
++        lastComparison = org.apache.thrift.TBaseHelper.compareTo(this.rowMutations, other.rowMutations);
++        if (lastComparison != 0) {
++          return lastComparison;
++        }
++      }
++      return 0;
++    }
++
++    public _Fields fieldForId(int fieldId) {
++      return _Fields.findByThriftId(fieldId);
++    }
++
++    public void read(org.apache.thrift.protocol.TProtocol iprot) throws org.apache.thrift.TException {
++      schemes.get(iprot.getScheme()).getScheme().read(iprot, this);
++    }
++
++    public void write(org.apache.thrift.protocol.TProtocol oprot) throws org.apache.thrift.TException {
++      schemes.get(oprot.getScheme()).getScheme().write(oprot, this);
++    }
++
++    @Override
++    public String toString() {
++      StringBuilder sb = new StringBuilder("checkAndMutateAndGetRow_args(");
++      boolean first = true;
++
++      sb.append("table:");
++      if (this.table == null) {
++        sb.append("null");
++      } else {
++        org.apache.thrift.TBaseHelper.toString(this.table, sb);
++      }
++      first = false;
++      if (!first) sb.append(", ");
++      sb.append("row:");
++      if (this.row == null) {
++        sb.append("null");
++      } else {
++        org.apache.thrift.TBaseHelper.toString(this.row, sb);
++      }
++      first = false;
++      if (!first) sb.append(", ");
++      sb.append("family:");
++      if (this.family == null) {
++        sb.append("null");
++      } else {
++        org.apache.thrift.TBaseHelper.toString(this.family, sb);
++      }
++      first = false;
++      if (!first) sb.append(", ");
++      sb.append("qualifier:");
++      if (this.qualifier == null) {
++        sb.append("null");
++      } else {
++        org.apache.thrift.TBaseHelper.toString(this.qualifier, sb);
++      }
++      first = false;
++      if (!first) sb.append(", ");
++      sb.append("compareOp:");
++      if (this.compareOp == null) {
++        sb.append("null");
++      } else {
++        sb.append(this.compareOp);
++      }
++      first = false;
++      if (!first) sb.append(", ");
++      sb.append("value:");
++      if (this.value == null) {
++        sb.append("null");
++      } else {
++        org.apache.thrift.TBaseHelper.toString(this.value, sb);
++      }
++      first = false;
++      if (!first) sb.append(", ");
++      sb.append("rowMutations:");
++      if (this.rowMutations == null) {
++        sb.append("null");
++      } else {
++        sb.append(this.rowMutations);
++      }
++      first = false;
++      sb.append(")");
++      return sb.toString();
++    }
++
++    public void validate() throws org.apache.thrift.TException {
++      // check for required fields
++      if (table == null) {
++        throw new org.apache.thrift.protocol.TProtocolException("Required field 'table' was not present! Struct: " + toString());
++      }
++      if (row == null) {
++        throw new org.apache.thrift.protocol.TProtocolException("Required field 'row' was not present! Struct: " + toString());
++      }
++      if (family == null) {
++        throw new org.apache.thrift.protocol.TProtocolException("Required field 'family' was not present! Struct: " + toString());
++      }
++      if (qualifier == null) {
++        throw new org.apache.thrift.protocol.TProtocolException("Required field 'qualifier' was not present! Struct: " + toString());
++      }
++      if (compareOp == null) {
++        throw new org.apache.thrift.protocol.TProtocolException("Required field 'compareOp' was not present! Struct: " + toString());
++      }
++      if (rowMutations == null) {
++        throw new org.apache.thrift.protocol.TProtocolException("Required field 'rowMutations' was not present! Struct: " + toString());
++      }
++      // check for sub-struct validity
++      if (rowMutations != null) {
++        rowMutations.validate();
++      }
++    }
++
++    private void writeObject(java.io.ObjectOutputStream out) throws java.io.IOException {
++      try {
++        write(new org.apache.thrift.protocol.TCompactProtocol(new org.apache.thrift.transport.TIOStreamTransport(out)));
++      } catch (org.apache.thrift.TException te) {
++        throw new java.io.IOException(te);
++      }
++    }
++
++    private void readObject(java.io.ObjectInputStream in) throws java.io.IOException, ClassNotFoundException {
++      try {
++        read(new org.apache.thrift.protocol.TCompactProtocol(new org.apache.thrift.transport.TIOStreamTransport(in)));
++      } catch (org.apache.thrift.TException te) {
++        throw new java.io.IOException(te);
++      }
++    }
++
++    private static class checkAndMutateAndGetRow_argsStandardSchemeFactory implements SchemeFactory {
++      public checkAndMutateAndGetRow_argsStandardScheme getScheme() {
++        return new checkAndMutateAndGetRow_argsStandardScheme();
++      }
++    }
++
++    private static class checkAndMutateAndGetRow_argsStandardScheme extends StandardScheme<checkAndMutateAndGetRow_args> {
++
++      public void read(org.apache.thrift.protocol.TProtocol iprot, checkAndMutateAndGetRow_args struct) throws org.apache.thrift.TException {
++        org.apache.thrift.protocol.TField schemeField;
++        iprot.readStructBegin();
++        while (true)
++        {
++          schemeField = iprot.readFieldBegin();
++          if (schemeField.type == org.apache.thrift.protocol.TType.STOP) { 
++            break;
++          }
++          switch (schemeField.id) {
++            case 1: // TABLE
++              if (schemeField.type == org.apache.thrift.protocol.TType.STRING) {
++                struct.table = iprot.readBinary();
++                struct.setTableIsSet(true);
++              } else { 
++                org.apache.thrift.protocol.TProtocolUtil.skip(iprot, schemeField.type);
++              }
++              break;
++            case 2: // ROW
++              if (schemeField.type == org.apache.thrift.protocol.TType.STRING) {
++                struct.row = iprot.readBinary();
++                struct.setRowIsSet(true);
++              } else { 
++                org.apache.thrift.protocol.TProtocolUtil.skip(iprot, schemeField.type);
++              }
++              break;
++            case 3: // FAMILY
++              if (schemeField.type == org.apache.thrift.protocol.TType.STRING) {
++                struct.family = iprot.readBinary();
++                struct.setFamilyIsSet(true);
++              } else { 
++                org.apache.thrift.protocol.TProtocolUtil.skip(iprot, schemeField.type);
++              }
++              break;
++            case 4: // QUALIFIER
++              if (schemeField.type == org.apache.thrift.protocol.TType.STRING) {
++                struct.qualifier = iprot.readBinary();
++                struct.setQualifierIsSet(true);
++              } else { 
++                org.apache.thrift.protocol.TProtocolUtil.skip(iprot, schemeField.type);
++              }
++              break;
++            case 5: // COMPARE_OP
++              if (schemeField.type == org.apache.thrift.protocol.TType.I32) {
++                struct.compareOp = org.apache.hadoop.hbase.thrift2.generated.TCompareOp.findByValue(iprot.readI32());
++                struct.setCompareOpIsSet(true);
++              } else { 
++                org.apache.thrift.protocol.TProtocolUtil.skip(iprot, schemeField.type);
++              }
++              break;
++            case 6: // VALUE
++              if (schemeField.type == org.apache.thrift.protocol.TType.STRING) {
++                struct.value = iprot.readBinary();
++                struct.setValueIsSet(true);
++              } else { 
++                org.apache.thrift.protocol.TProtocolUtil.skip(iprot, schemeField.type);
++              }
++              break;
++            case 7: // ROW_MUTATIONS
++              if (schemeField.type == org.apache.thrift.protocol.TType.STRUCT) {
++                struct.rowMutations = new TRowMutations();
++                struct.rowMutations.read(iprot);
++                struct.setRowMutationsIsSet(true);
++              } else { 
++                org.apache.thrift.protocol.TProtocolUtil.skip(iprot, schemeField.type);
++              }
++              break;
++            default:
++              org.apache.thrift.protocol.TProtocolUtil.skip(iprot, schemeField.type);
++          }
++          iprot.readFieldEnd();
++        }
++        iprot.readStructEnd();
++
++        // check for required fields of primitive type, which can't be checked in the validate method
++        struct.validate();
++      }
++
++      public void write(org.apache.thrift.protocol.TProtocol oprot, checkAndMutateAndGetRow_args struct) throws org.apache.thrift.TException {
++        struct.validate();
++
++        oprot.writeStructBegin(STRUCT_DESC);
++        if (struct.table != null) {
++          oprot.writeFieldBegin(TABLE_FIELD_DESC);
++          oprot.writeBinary(struct.table);
++          oprot.writeFieldEnd();
++        }
++        if (struct.row != null) {
++          oprot.writeFieldBegin(ROW_FIELD_DESC);
++          oprot.writeBinary(struct.row);
++          oprot.writeFieldEnd();
++        }
++        if (struct.family != null) {
++          oprot.writeFieldBegin(FAMILY_FIELD_DESC);
++          oprot.writeBinary(struct.family);
++          oprot.writeFieldEnd();
++        }
++        if (struct.qualifier != null) {
++          oprot.writeFieldBegin(QUALIFIER_FIELD_DESC);
++          oprot.writeBinary(struct.qualifier);
++          oprot.writeFieldEnd();
++        }
++        if (struct.compareOp != null) {
++          oprot.writeFieldBegin(COMPARE_OP_FIELD_DESC);
++          oprot.writeI32(struct.compareOp.getValue());
++          oprot.writeFieldEnd();
++        }
++        if (struct.value != null) {
++          oprot.writeFieldBegin(VALUE_FIELD_DESC);
++          oprot.writeBinary(struct.value);
++          oprot.writeFieldEnd();
++        }
++        if (struct.rowMutations != null) {
++          oprot.writeFieldBegin(ROW_MUTATIONS_FIELD_DESC);
++          struct.rowMutations.write(oprot);
++          oprot.writeFieldEnd();
++        }
++        oprot.writeFieldStop();
++        oprot.writeStructEnd();
++      }
++
++    }
++
++    private static class checkAndMutateAndGetRow_argsTupleSchemeFactory implements SchemeFactory {
++      public checkAndMutateAndGetRow_argsTupleScheme getScheme() {
++        return new checkAndMutateAndGetRow_argsTupleScheme();
++      }
++    }
++
++    private static class checkAndMutateAndGetRow_argsTupleScheme extends TupleScheme<checkAndMutateAndGetRow_args> {
++
++      @Override
++      public void write(org.apache.thrift.protocol.TProtocol prot, checkAndMutateAndGetRow_args struct) throws org.apache.thrift.TException {
++        TTupleProtocol oprot = (TTupleProtocol) prot;
++        oprot.writeBinary(struct.table);
++        oprot.writeBinary(struct.row);
++        oprot.writeBinary(struct.family);
++        oprot.writeBinary(struct.qualifier);
++        oprot.writeI32(struct.compareOp.getValue());
++        struct.rowMutations.write(oprot);
++        BitSet optionals = new BitSet();
++        if (struct.isSetValue()) {
++          optionals.set(0);
++        }
++        oprot.writeBitSet(optionals, 1);
++        if (struct.isSetValue()) {
++          oprot.writeBinary(struct.value);
++        }
++      }
++
++      @Override
++      public void read(org.apache.thrift.protocol.TProtocol prot, checkAndMutateAndGetRow_args struct) throws org.apache.thrift.TException {
++        TTupleProtocol iprot = (TTupleProtocol) prot;
++        struct.table = iprot.readBinary();
++        struct.setTableIsSet(true);
++        struct.row = iprot.readBinary();
++        struct.setRowIsSet(true);
++        struct.family = iprot.readBinary();
++        struct.setFamilyIsSet(true);
++        struct.qualifier = iprot.readBinary();
++        struct.setQualifierIsSet(true);
++        struct.compareOp = org.apache.hadoop.hbase.thrift2.generated.TCompareOp.findByValue(iprot.readI32());
++        struct.setCompareOpIsSet(true);
++        struct.rowMutations = new TRowMutations();
++        struct.rowMutations.read(iprot);
++        struct.setRowMutationsIsSet(true);
++        BitSet incoming = iprot.readBitSet(1);
++        if (incoming.get(0)) {
++          struct.value = iprot.readBinary();
++          struct.setValueIsSet(true);
++        }
++      }
++    }
++
++  }
++
++  public static class checkAndMutateAndGetRow_result implements org.apache.thrift.TBase<checkAndMutateAndGetRow_result, checkAndMutateAndGetRow_result._Fields>, java.io.Serializable, Cloneable, Comparable<checkAndMutateAndGetRow_result>   {
++    private static final org.apache.thrift.protocol.TStruct STRUCT_DESC = new org.apache.thrift.protocol.TStruct("checkAndMutateAndGetRow_result");
++
++    private static final org.apache.thrift.protocol.TField SUCCESS_FIELD_DESC = new org.apache.thrift.protocol.TField("success", org.apache.thrift.protocol.TType.STRUCT, (short)0);
++    private static final org.apache.thrift.protocol.TField IO_FIELD_DESC = new org.apache.thrift.protocol.TField("io", org.apache.thrift.protocol.TType.STRUCT, (short)1);
++
++    private static final Map<Class<? extends IScheme>, SchemeFactory> schemes = new HashMap<Class<? extends IScheme>, SchemeFactory>();
++    static {
++      schemes.put(StandardScheme.class, new checkAndMutateAndGetRow_resultStandardSchemeFactory());
++      schemes.put(TupleScheme.class, new checkAndMutateAndGetRow_resultTupleSchemeFactory());
++    }
++
++    public TProcessedAndResult success; // required
++    public TIOError io; // required
++
++    /** The set of fields this struct contains, along with convenience methods for finding and manipulating them. */
++    public enum _Fields implements org.apache.thrift.TFieldIdEnum {
++      SUCCESS((short)0, "success"),
++      IO((short)1, "io");
++
++      private static final Map<String, _Fields> byName = new HashMap<String, _Fields>();
++
++      static {
++        for (_Fields field : EnumSet.allOf(_Fields.class)) {
++          byName.put(field.getFieldName(), field);
++        }
++      }
++
++      /**
++       * Find the _Fields constant that matches fieldId, or null if its not found.
++       */
++      public static _Fields findByThriftId(int fieldId) {
++        switch(fieldId) {
++          case 0: // SUCCESS
++            return SUCCESS;
++          case 1: // IO
++            return IO;
++          default:
++            return null;
++        }
++      }
++
++      /**
++       * Find the _Fields constant that matches fieldId, throwing an exception
++       * if it is not found.
++       */
++      public static _Fields findByThriftIdOrThrow(int fieldId) {
++        _Fields fields = findByThriftId(fieldId);
++        if (fields == null) throw new IllegalArgumentException("Field " + fieldId + " doesn't exist!");
++        return fields;
++      }
++
++      /**
++       * Find the _Fields constant that matches name, or null if its not found.
++       */
++      public static _Fields findByName(String name) {
++        return byName.get(name);
++      }
++
++      private final short _thriftId;
++      private final String _fieldName;
++
++      _Fields(short thriftId, String fieldName) {
++        _thriftId = thriftId;
++        _fieldName = fieldName;
++      }
++
++      public short getThriftFieldId() {
++        return _thriftId;
++      }
++
++      public String getFieldName() {
++        return _fieldName;
++      }
++    }
++
++    // isset id assignments
++    public static final Map<_Fields, org.apache.thrift.meta_data.FieldMetaData> metaDataMap;
++    static {
++      Map<_Fields, org.apache.thrift.meta_data.FieldMetaData> tmpMap = new EnumMap<_Fields, org.apache.thrift.meta_data.FieldMetaData>(_Fields.class);
++      tmpMap.put(_Fields.SUCCESS, new org.apache.thrift.meta_data.FieldMetaData("success", org.apache.thrift.TFieldRequirementType.DEFAULT, 
++          new org.apache.thrift.meta_data.StructMetaData(org.apache.thrift.protocol.TType.STRUCT, TProcessedAndResult.class)));
++      tmpMap.put(_Fields.IO, new org.apache.thrift.meta_data.FieldMetaData("io", org.apache.thrift.TFieldRequirementType.DEFAULT, 
++          new org.apache.thrift.meta_data.FieldValueMetaData(org.apache.thrift.protocol.TType.STRUCT)));
++      metaDataMap = Collections.unmodifiableMap(tmpMap);
++      org.apache.thrift.meta_data.FieldMetaData.addStructMetaDataMap(checkAndMutateAndGetRow_result.class, metaDataMap);
++    }
++
++    public checkAndMutateAndGetRow_result() {
++    }
++
++    public checkAndMutateAndGetRow_result(
++      TProcessedAndResult success,
++      TIOError io)
++    {
++      this();
++      this.success = success;
++      this.io = io;
++    }
++
++    /**
++     * Performs a deep copy on <i>other</i>.
++     */
++    public checkAndMutateAndGetRow_result(checkAndMutateAndGetRow_result other) {
++      if (other.isSetSuccess()) {
++        this.success = new TProcessedAndResult(other.success);
++      }
++      if (other.isSetIo()) {
++        this.io = new TIOError(other.io);
++      }
++    }
++
++    public checkAndMutateAndGetRow_result deepCopy() {
++      return new checkAndMutateAndGetRow_result(this);
++    }
++
++    @Override
++    public void clear() {
++      this.success = null;
++      this.io = null;
++    }
++
++    public TProcessedAndResult getSuccess() {
++      return this.success;
++    }
++
++    public checkAndMutateAndGetRow_result setSuccess(TProcessedAndResult success) {
++      this.success = success;
++      return this;
++    }
++
++    public void unsetSuccess() {
++      this.success = null;
++    }
++
++    /** Returns true if field success is set (has been assigned a value) and false otherwise */
++    public boolean isSetSuccess() {
++      return this.success != null;
++    }
++
++    public void setSuccessIsSet(boolean value) {
++      if (!value) {
++        this.success = null;
++      }
++    }
++
++    public TIOError getIo() {
++      return this.io;
++    }
++
++    public checkAndMutateAndGetRow_result setIo(TIOError io) {
++      this.io = io;
++      return this;
++    }
++
++    public void unsetIo() {
++      this.io = null;
++    }
++
++    /** Returns true if field io is set (has been assigned a value) and false otherwise */
++    public boolean isSetIo() {
++      return this.io != null;
++    }
++
++    public void setIoIsSet(boolean value) {
++      if (!value) {
++        this.io = null;
++      }
++    }
++
++    public void setFieldValue(_Fields field, Object value) {
++      switch (field) {
++      case SUCCESS:
++        if (value == null) {
++          unsetSuccess();
++        } else {
++          setSuccess((TProcessedAndResult)value);
++        }
++        break;
++
++      case IO:
++        if (value == null) {
++          unsetIo();
++        } else {
++          setIo((TIOError)value);
++        }
++        break;
++
++      }
++    }
++
++    public Object getFieldValue(_Fields field) {
++      switch (field) {
++      case SUCCESS:
++        return getSuccess();
++
++      case IO:
++        return getIo();
++
++      }
++      throw new IllegalStateException();
++    }
++
++    /** Returns true if field corresponding to fieldID is set (has been assigned a value) and false otherwise */
++    public boolean isSet(_Fields field) {
++      if (field == null) {
++        throw new IllegalArgumentException();
++      }
++
++      switch (field) {
++      case SUCCESS:
++        return isSetSuccess();
++      case IO:
++        return isSetIo();
++      }
++      throw new IllegalStateException();
++    }
++
++    @Override
++    public boolean equals(Object that) {
++      if (that == null)
++        return false;
++      if (that instanceof checkAndMutateAndGetRow_result)
++        return this.equals((checkAndMutateAndGetRow_result)that);
++      return false;
++    }
++
++    public boolean equals(checkAndMutateAndGetRow_result that) {
++      if (that == null)
++        return false;
++
++      boolean this_present_success = true && this.isSetSuccess();
++      boolean that_present_success = true && that.isSetSuccess();
++      if (this_present_success || that_present_success) {
++        if (!(this_present_success && that_present_success))
++          return false;
++        if (!this.success.equals(that.success))
++          return false;
++      }
++
++      boolean this_present_io = true && this.isSetIo();
++      boolean that_present_io = true && that.isSetIo();
++      if (this_present_io || that_present_io) {
++        if (!(this_present_io && that_present_io))
++          return false;
++        if (!this.io.equals(that.io))
++          return false;
++      }
++
++      return true;
++    }
++
++    @Override
++    public int hashCode() {
++      List<Object> list = new ArrayList<Object>();
++
++      boolean present_success = true && (isSetSuccess());
++      list.add(present_success);
++      if (present_success)
++        list.add(success);
++
++      boolean present_io = true && (isSetIo());
++      list.add(present_io);
++      if (present_io)
++        list.add(io);
++
++      return list.hashCode();
++    }
++
++    @Override
++    public int compareTo(checkAndMutateAndGetRow_result other) {
++      if (!getClass().equals(other.getClass())) {
++        return getClass().getName().compareTo(other.getClass().getName());
++      }
++
++      int lastComparison = 0;
++
++      lastComparison = Boolean.valueOf(isSetSuccess()).compareTo(other.isSetSuccess());
++      if (lastComparison != 0) {
++        return lastComparison;
++      }
++      if (isSetSuccess()) {
++        lastComparison = org.apache.thrift.TBaseHelper.compareTo(this.success, other.success);
++        if (lastComparison != 0) {
++          return lastComparison;
++        }
++      }
++      lastComparison = Boolean.valueOf(isSetIo()).compareTo(other.isSetIo());
++      if (lastComparison != 0) {
++        return lastComparison;
++      }
++      if (isSetIo()) {
++        lastComparison = org.apache.thrift.TBaseHelper.compareTo(this.io, other.io);
++        if (lastComparison != 0) {
++          return lastComparison;
++        }
++      }
++      return 0;
++    }
++
++    public _Fields fieldForId(int fieldId) {
++      return _Fields.findByThriftId(fieldId);
++    }
++
++    public void read(org.apache.thrift.protocol.TProtocol iprot) throws org.apache.thrift.TException {
++      schemes.get(iprot.getScheme()).getScheme().read(iprot, this);
++    }
++
++    public void write(org.apache.thrift.protocol.TProtocol oprot) throws org.apache.thrift.TException {
++      schemes.get(oprot.getScheme()).getScheme().write(oprot, this);
++      }
++
++    @Override
++    public String toString() {
++      StringBuilder sb = new StringBuilder("checkAndMutateAndGetRow_result(");
++      boolean first = true;
++
++      sb.append("success:");
++      if (this.success == null) {
++        sb.append("null");
++      } else {
++        sb.append(this.success);
++      }
++      first = false;
++      if (!first) sb.append(", ");
++      sb.append("io:");
++      if (this.io == null) {
++        sb.append("null");
++      } else {
++        sb.append(this.io);
++      }
++      first = false;
++      sb.append(")");
++      return sb.toString();
++    }
++
++    public void validate() throws org.apache.thrift.TException {
++      // check for required fields
++      // check for sub-struct validity
++      if (success != null) {
++        success.validate();
++      }
++    }
++
++    private void writeObject(java.io.ObjectOutputStream out) throws java.io.IOException {
++      try {
++        write(new org.apache.thrift.protocol.TCompactProtocol(new org.apache.thrift.transport.TIOStreamTransport(out)));
++      } catch (org.apache.thrift.TException te) {
++        throw new java.io.IOException(te);
++      }
++    }
++
++    private void readObject(java.io.ObjectInputStream in) throws java.io.IOException, ClassNotFoundException {
++      try {
++        read(new org.apache.thrift.protocol.TCompactProtocol(new org.apache.thrift.transport.TIOStreamTransport(in)));
++      } catch (org.apache.thrift.TException te) {
++        throw new java.io.IOException(te);
++      }
++    }
++
++    private static class checkAndMutateAndGetRow_resultStandardSchemeFactory implements SchemeFactory {
++      public checkAndMutateAndGetRow_resultStandardScheme getScheme() {
++        return new checkAndMutateAndGetRow_resultStandardScheme();
++      }
++    }
++
++    private static class checkAndMutateAndGetRow_resultStandardScheme extends StandardScheme<checkAndMutateAndGetRow_result> {
++
++      public void read(org.apache.thrift.protocol.TProtocol iprot, checkAndMutateAndGetRow_result struct) throws org.apache.thrift.TException {
++        org.apache.thrift.protocol.TField schemeField;
++        iprot.readStructBegin();
++        while (true)
++        {
++          schemeField = iprot.readFieldBegin();
++          if (schemeField.type == org.apache.thrift.protocol.TType.STOP) { 
++            break;
++          }
++          switch (schemeField.id) {
++            case 0: // SUCCESS
++              if (schemeField.type == org.apache.thrift.protocol.TType.STRUCT) {
++                struct.success = new TProcessedAndResult();
++                struct.success.read(iprot);
++                struct.setSuccessIsSet(true);
++              } else { 
++                org.apache.thrift.protocol.TProtocolUtil.skip(iprot, schemeField.type);
++              }
++              break;
++            case 1: // IO
++              if (schemeField.type == org.apache.thrift.protocol.TType.STRUCT) {
++                struct.io = new TIOError();
++                struct.io.read(iprot);
++                struct.setIoIsSet(true);
++              } else { 
++                org.apache.thrift.protocol.TProtocolUtil.skip(iprot, schemeField.type);
++              }
++              break;
++            default:
++              org.apache.thrift.protocol.TProtocolUtil.skip(iprot, schemeField.type);
++          }
++          iprot.readFieldEnd();
++        }
++        iprot.readStructEnd();
++
++        // check for required fields of primitive type, which can't be checked in the validate method
++        struct.validate();
++      }
++
++      public void write(org.apache.thrift.protocol.TProtocol oprot, checkAndMutateAndGetRow_result struct) throws org.apache.thrift.TException {
++        struct.validate();
++
++        oprot.writeStructBegin(STRUCT_DESC);
++        if (struct.success != null) {
++          oprot.writeFieldBegin(SUCCESS_FIELD_DESC);
++          struct.success.write(oprot);
++          oprot.writeFieldEnd();
++        }
++        if (struct.io != null) {
++          oprot.writeFieldBegin(IO_FIELD_DESC);
++          struct.io.write(oprot);
++          oprot.writeFieldEnd();
++        }
++        oprot.writeFieldStop();
++        oprot.writeStructEnd();
++      }
++
++    }
++
++    private static class checkAndMutateAndGetRow_resultTupleSchemeFactory implements SchemeFactory {
++      public checkAndMutateAndGetRow_resultTupleScheme getScheme() {
++        return new checkAndMutateAndGetRow_resultTupleScheme();
++      }
++    }
++
++    private static class checkAndMutateAndGetRow_resultTupleScheme extends TupleScheme<checkAndMutateAndGetRow_result> {
++
++      @Override
++      public void write(org.apache.thrift.protocol.TProtocol prot, checkAndMutateAndGetRow_result struct) throws org.apache.thrift.TException {
++        TTupleProtocol oprot = (TTupleProtocol) prot;
++        BitSet optionals = new BitSet();
++        if (struct.isSetSuccess()) {
++          optionals.set(0);
++        }
++        if (struct.isSetIo()) {
++          optionals.set(1);
++        }
++        oprot.writeBitSet(optionals, 2);
++        if (struct.isSetSuccess()) {
++          struct.success.write(oprot);
++        }
++        if (struct.isSetIo()) {
++          struct.io.write(oprot);
++        }
++      }
++
++      @Override
++      public void read(org.apache.thrift.protocol.TProtocol prot, checkAndMutateAndGetRow_result struct) throws org.apache.thrift.TException {
++        TTupleProtocol iprot = (TTupleProtocol) prot;
++        BitSet incoming = iprot.readBitSet(2);
++        if (incoming.get(0)) {
++          struct.success = new TProcessedAndResult();
++          struct.success.read(iprot);
++          struct.setSuccessIsSet(true);
++        }
++        if (incoming.get(1)) {
++          struct.io = new TIOError();
++          struct.io.read(iprot);
++          struct.setIoIsSet(true);
++        }
++      }
++    }
++
++  }
++
+ }
+Index: hbase-thrift/src/main/java/org/apache/hadoop/hbase/thrift2/generated/TProcessedAndResult.java
+===================================================================
+--- hbase-thrift/src/main/java/org/apache/hadoop/hbase/thrift2/generated/TProcessedAndResult.java	(revision 0)
++++ hbase-thrift/src/main/java/org/apache/hadoop/hbase/thrift2/generated/TProcessedAndResult.java	(revision 709)
+@@ -0,0 +1,496 @@
++/**
++ * Autogenerated by Thrift Compiler (0.9.3)
++ *
++ * DO NOT EDIT UNLESS YOU ARE SURE THAT YOU KNOW WHAT YOU ARE DOING
++ *  @generated
++ */
++package org.apache.hadoop.hbase.thrift2.generated;
++
++import org.apache.thrift.scheme.IScheme;
++import org.apache.thrift.scheme.SchemeFactory;
++import org.apache.thrift.scheme.StandardScheme;
++
++import org.apache.thrift.scheme.TupleScheme;
++import org.apache.thrift.protocol.TTupleProtocol;
++import org.apache.thrift.protocol.TProtocolException;
++import org.apache.thrift.EncodingUtils;
++import org.apache.thrift.TException;
++import org.apache.thrift.async.AsyncMethodCallback;
++import org.apache.thrift.server.AbstractNonblockingServer.*;
++import java.util.List;
++import java.util.ArrayList;
++import java.util.Map;
++import java.util.HashMap;
++import java.util.EnumMap;
++import java.util.Set;
++import java.util.HashSet;
++import java.util.EnumSet;
++import java.util.Collections;
++import java.util.BitSet;
++import java.nio.ByteBuffer;
++import java.util.Arrays;
++import javax.annotation.Generated;
++import org.slf4j.Logger;
++import org.slf4j.LoggerFactory;
++
++@SuppressWarnings({"cast", "rawtypes", "serial", "unchecked"})
++@Generated(value = "Autogenerated by Thrift Compiler (0.9.3)", date = "2017-06-06")
++public class TProcessedAndResult implements org.apache.thrift.TBase<TProcessedAndResult, TProcessedAndResult._Fields>, java.io.Serializable, Cloneable, Comparable<TProcessedAndResult> {
++  private static final org.apache.thrift.protocol.TStruct STRUCT_DESC = new org.apache.thrift.protocol.TStruct("TProcessedAndResult");
++
++  private static final org.apache.thrift.protocol.TField PROCESSED_FIELD_DESC = new org.apache.thrift.protocol.TField("processed", org.apache.thrift.protocol.TType.BOOL, (short)1);
++  private static final org.apache.thrift.protocol.TField RESULT_FIELD_DESC = new org.apache.thrift.protocol.TField("result", org.apache.thrift.protocol.TType.STRUCT, (short)2);
++
++  private static final Map<Class<? extends IScheme>, SchemeFactory> schemes = new HashMap<Class<? extends IScheme>, SchemeFactory>();
++  static {
++    schemes.put(StandardScheme.class, new TProcessedAndResultStandardSchemeFactory());
++    schemes.put(TupleScheme.class, new TProcessedAndResultTupleSchemeFactory());
++  }
++
++  public boolean processed; // required
++  public TResult result; // required
++
++  /** The set of fields this struct contains, along with convenience methods for finding and manipulating them. */
++  public enum _Fields implements org.apache.thrift.TFieldIdEnum {
++    PROCESSED((short)1, "processed"),
++    RESULT((short)2, "result");
++
++    private static final Map<String, _Fields> byName = new HashMap<String, _Fields>();
++
++    static {
++      for (_Fields field : EnumSet.allOf(_Fields.class)) {
++        byName.put(field.getFieldName(), field);
++      }
++    }
++
++    /**
++     * Find the _Fields constant that matches fieldId, or null if its not found.
++     */
++    public static _Fields findByThriftId(int fieldId) {
++      switch(fieldId) {
++        case 1: // PROCESSED
++          return PROCESSED;
++        case 2: // RESULT
++          return RESULT;
++        default:
++          return null;
++      }
++    }
++
++    /**
++     * Find the _Fields constant that matches fieldId, throwing an exception
++     * if it is not found.
++     */
++    public static _Fields findByThriftIdOrThrow(int fieldId) {
++      _Fields fields = findByThriftId(fieldId);
++      if (fields == null) throw new IllegalArgumentException("Field " + fieldId + " doesn't exist!");
++      return fields;
++    }
++
++    /**
++     * Find the _Fields constant that matches name, or null if its not found.
++     */
++    public static _Fields findByName(String name) {
++      return byName.get(name);
++    }
++
++    private final short _thriftId;
++    private final String _fieldName;
++
++    _Fields(short thriftId, String fieldName) {
++      _thriftId = thriftId;
++      _fieldName = fieldName;
++    }
++
++    public short getThriftFieldId() {
++      return _thriftId;
++    }
++
++    public String getFieldName() {
++      return _fieldName;
++    }
++  }
++
++  // isset id assignments
++  private static final int __PROCESSED_ISSET_ID = 0;
++  private byte __isset_bitfield = 0;
++  public static final Map<_Fields, org.apache.thrift.meta_data.FieldMetaData> metaDataMap;
++  static {
++    Map<_Fields, org.apache.thrift.meta_data.FieldMetaData> tmpMap = new EnumMap<_Fields, org.apache.thrift.meta_data.FieldMetaData>(_Fields.class);
++    tmpMap.put(_Fields.PROCESSED, new org.apache.thrift.meta_data.FieldMetaData("processed", org.apache.thrift.TFieldRequirementType.REQUIRED, 
++        new org.apache.thrift.meta_data.FieldValueMetaData(org.apache.thrift.protocol.TType.BOOL)));
++    tmpMap.put(_Fields.RESULT, new org.apache.thrift.meta_data.FieldMetaData("result", org.apache.thrift.TFieldRequirementType.REQUIRED, 
++        new org.apache.thrift.meta_data.StructMetaData(org.apache.thrift.protocol.TType.STRUCT, TResult.class)));
++    metaDataMap = Collections.unmodifiableMap(tmpMap);
++    org.apache.thrift.meta_data.FieldMetaData.addStructMetaDataMap(TProcessedAndResult.class, metaDataMap);
++  }
++
++  public TProcessedAndResult() {
++  }
++
++  public TProcessedAndResult(
++    boolean processed,
++    TResult result)
++  {
++    this();
++    this.processed = processed;
++    setProcessedIsSet(true);
++    this.result = result;
++  }
++
++  /**
++   * Performs a deep copy on <i>other</i>.
++   */
++  public TProcessedAndResult(TProcessedAndResult other) {
++    __isset_bitfield = other.__isset_bitfield;
++    this.processed = other.processed;
++    if (other.isSetResult()) {
++      this.result = new TResult(other.result);
++    }
++  }
++
++  public TProcessedAndResult deepCopy() {
++    return new TProcessedAndResult(this);
++  }
++
++  @Override
++  public void clear() {
++    setProcessedIsSet(false);
++    this.processed = false;
++    this.result = null;
++  }
++
++  public boolean isProcessed() {
++    return this.processed;
++  }
++
++  public TProcessedAndResult setProcessed(boolean processed) {
++    this.processed = processed;
++    setProcessedIsSet(true);
++    return this;
++  }
++
++  public void unsetProcessed() {
++    __isset_bitfield = EncodingUtils.clearBit(__isset_bitfield, __PROCESSED_ISSET_ID);
++  }
++
++  /** Returns true if field processed is set (has been assigned a value) and false otherwise */
++  public boolean isSetProcessed() {
++    return EncodingUtils.testBit(__isset_bitfield, __PROCESSED_ISSET_ID);
++  }
++
++  public void setProcessedIsSet(boolean value) {
++    __isset_bitfield = EncodingUtils.setBit(__isset_bitfield, __PROCESSED_ISSET_ID, value);
++  }
++
++  public TResult getResult() {
++    return this.result;
++  }
++
++  public TProcessedAndResult setResult(TResult result) {
++    this.result = result;
++    return this;
++  }
++
++  public void unsetResult() {
++    this.result = null;
++  }
++
++  /** Returns true if field result is set (has been assigned a value) and false otherwise */
++  public boolean isSetResult() {
++    return this.result != null;
++  }
++
++  public void setResultIsSet(boolean value) {
++    if (!value) {
++      this.result = null;
++    }
++  }
++
++  public void setFieldValue(_Fields field, Object value) {
++    switch (field) {
++    case PROCESSED:
++      if (value == null) {
++        unsetProcessed();
++      } else {
++        setProcessed((Boolean)value);
++      }
++      break;
++
++    case RESULT:
++      if (value == null) {
++        unsetResult();
++      } else {
++        setResult((TResult)value);
++      }
++      break;
++
++    }
++  }
++
++  public Object getFieldValue(_Fields field) {
++    switch (field) {
++    case PROCESSED:
++      return isProcessed();
++
++    case RESULT:
++      return getResult();
++
++    }
++    throw new IllegalStateException();
++  }
++
++  /** Returns true if field corresponding to fieldID is set (has been assigned a value) and false otherwise */
++  public boolean isSet(_Fields field) {
++    if (field == null) {
++      throw new IllegalArgumentException();
++    }
++
++    switch (field) {
++    case PROCESSED:
++      return isSetProcessed();
++    case RESULT:
++      return isSetResult();
++    }
++    throw new IllegalStateException();
++  }
++
++  @Override
++  public boolean equals(Object that) {
++    if (that == null)
++      return false;
++    if (that instanceof TProcessedAndResult)
++      return this.equals((TProcessedAndResult)that);
++    return false;
++  }
++
++  public boolean equals(TProcessedAndResult that) {
++    if (that == null)
++      return false;
++
++    boolean this_present_processed = true;
++    boolean that_present_processed = true;
++    if (this_present_processed || that_present_processed) {
++      if (!(this_present_processed && that_present_processed))
++        return false;
++      if (this.processed != that.processed)
++        return false;
++    }
++
++    boolean this_present_result = true && this.isSetResult();
++    boolean that_present_result = true && that.isSetResult();
++    if (this_present_result || that_present_result) {
++      if (!(this_present_result && that_present_result))
++        return false;
++      if (!this.result.equals(that.result))
++        return false;
++    }
++
++    return true;
++  }
++
++  @Override
++  public int hashCode() {
++    List<Object> list = new ArrayList<Object>();
++
++    boolean present_processed = true;
++    list.add(present_processed);
++    if (present_processed)
++      list.add(processed);
++
++    boolean present_result = true && (isSetResult());
++    list.add(present_result);
++    if (present_result)
++      list.add(result);
++
++    return list.hashCode();
++  }
++
++  @Override
++  public int compareTo(TProcessedAndResult other) {
++    if (!getClass().equals(other.getClass())) {
++      return getClass().getName().compareTo(other.getClass().getName());
++    }
++
++    int lastComparison = 0;
++
++    lastComparison = Boolean.valueOf(isSetProcessed()).compareTo(other.isSetProcessed());
++    if (lastComparison != 0) {
++      return lastComparison;
++    }
++    if (isSetProcessed()) {
++      lastComparison = org.apache.thrift.TBaseHelper.compareTo(this.processed, other.processed);
++      if (lastComparison != 0) {
++        return lastComparison;
++      }
++    }
++    lastComparison = Boolean.valueOf(isSetResult()).compareTo(other.isSetResult());
++    if (lastComparison != 0) {
++      return lastComparison;
++    }
++    if (isSetResult()) {
++      lastComparison = org.apache.thrift.TBaseHelper.compareTo(this.result, other.result);
++      if (lastComparison != 0) {
++        return lastComparison;
++      }
++    }
++    return 0;
++  }
++
++  public _Fields fieldForId(int fieldId) {
++    return _Fields.findByThriftId(fieldId);
++  }
++
++  public void read(org.apache.thrift.protocol.TProtocol iprot) throws org.apache.thrift.TException {
++    schemes.get(iprot.getScheme()).getScheme().read(iprot, this);
++  }
++
++  public void write(org.apache.thrift.protocol.TProtocol oprot) throws org.apache.thrift.TException {
++    schemes.get(oprot.getScheme()).getScheme().write(oprot, this);
++  }
++
++  @Override
++  public String toString() {
++    StringBuilder sb = new StringBuilder("TProcessedAndResult(");
++    boolean first = true;
++
++    sb.append("processed:");
++    sb.append(this.processed);
++    first = false;
++    if (!first) sb.append(", ");
++    sb.append("result:");
++    if (this.result == null) {
++      sb.append("null");
++    } else {
++      sb.append(this.result);
++    }
++    first = false;
++    sb.append(")");
++    return sb.toString();
++  }
++
++  public void validate() throws org.apache.thrift.TException {
++    // check for required fields
++    // alas, we cannot check 'processed' because it's a primitive and you chose the non-beans generator.
++    if (result == null) {
++      throw new org.apache.thrift.protocol.TProtocolException("Required field 'result' was not present! Struct: " + toString());
++    }
++    // check for sub-struct validity
++    if (result != null) {
++      result.validate();
++    }
++  }
++
++  private void writeObject(java.io.ObjectOutputStream out) throws java.io.IOException {
++    try {
++      write(new org.apache.thrift.protocol.TCompactProtocol(new org.apache.thrift.transport.TIOStreamTransport(out)));
++    } catch (org.apache.thrift.TException te) {
++      throw new java.io.IOException(te);
++    }
++  }
++
++  private void readObject(java.io.ObjectInputStream in) throws java.io.IOException, ClassNotFoundException {
++    try {
++      // it doesn't seem like you should have to do this, but java serialization is wacky, and doesn't call the default constructor.
++      __isset_bitfield = 0;
++      read(new org.apache.thrift.protocol.TCompactProtocol(new org.apache.thrift.transport.TIOStreamTransport(in)));
++    } catch (org.apache.thrift.TException te) {
++      throw new java.io.IOException(te);
++    }
++  }
++
++  private static class TProcessedAndResultStandardSchemeFactory implements SchemeFactory {
++    public TProcessedAndResultStandardScheme getScheme() {
++      return new TProcessedAndResultStandardScheme();
++    }
++  }
++
++  private static class TProcessedAndResultStandardScheme extends StandardScheme<TProcessedAndResult> {
++
++    public void read(org.apache.thrift.protocol.TProtocol iprot, TProcessedAndResult struct) throws org.apache.thrift.TException {
++      org.apache.thrift.protocol.TField schemeField;
++      iprot.readStructBegin();
++      while (true)
++      {
++        schemeField = iprot.readFieldBegin();
++        if (schemeField.type == org.apache.thrift.protocol.TType.STOP) { 
++          break;
++        }
++        switch (schemeField.id) {
++          case 1: // PROCESSED
++            if (schemeField.type == org.apache.thrift.protocol.TType.BOOL) {
++              struct.processed = iprot.readBool();
++              struct.setProcessedIsSet(true);
++            } else { 
++              org.apache.thrift.protocol.TProtocolUtil.skip(iprot, schemeField.type);
++            }
++            break;
++          case 2: // RESULT
++            if (schemeField.type == org.apache.thrift.protocol.TType.STRUCT) {
++              struct.result = new TResult();
++              struct.result.read(iprot);
++              struct.setResultIsSet(true);
++            } else { 
++              org.apache.thrift.protocol.TProtocolUtil.skip(iprot, schemeField.type);
++            }
++            break;
++          default:
++            org.apache.thrift.protocol.TProtocolUtil.skip(iprot, schemeField.type);
++        }
++        iprot.readFieldEnd();
++      }
++      iprot.readStructEnd();
++
++      // check for required fields of primitive type, which can't be checked in the validate method
++      if (!struct.isSetProcessed()) {
++        throw new org.apache.thrift.protocol.TProtocolException("Required field 'processed' was not found in serialized data! Struct: " + toString());
++      }
++      struct.validate();
++    }
++
++    public void write(org.apache.thrift.protocol.TProtocol oprot, TProcessedAndResult struct) throws org.apache.thrift.TException {
++      struct.validate();
++
++      oprot.writeStructBegin(STRUCT_DESC);
++      oprot.writeFieldBegin(PROCESSED_FIELD_DESC);
++      oprot.writeBool(struct.processed);
++      oprot.writeFieldEnd();
++      if (struct.result != null) {
++        oprot.writeFieldBegin(RESULT_FIELD_DESC);
++        struct.result.write(oprot);
++        oprot.writeFieldEnd();
++      }
++      oprot.writeFieldStop();
++      oprot.writeStructEnd();
++    }
++
++  }
++
++  private static class TProcessedAndResultTupleSchemeFactory implements SchemeFactory {
++    public TProcessedAndResultTupleScheme getScheme() {
++      return new TProcessedAndResultTupleScheme();
++    }
++  }
++
++  private static class TProcessedAndResultTupleScheme extends TupleScheme<TProcessedAndResult> {
++
++    @Override
++    public void write(org.apache.thrift.protocol.TProtocol prot, TProcessedAndResult struct) throws org.apache.thrift.TException {
++      TTupleProtocol oprot = (TTupleProtocol) prot;
++      oprot.writeBool(struct.processed);
++      struct.result.write(oprot);
++    }
++
++    @Override
++    public void read(org.apache.thrift.protocol.TProtocol prot, TProcessedAndResult struct) throws org.apache.thrift.TException {
++      TTupleProtocol iprot = (TTupleProtocol) prot;
++      struct.processed = iprot.readBool();
++      struct.setProcessedIsSet(true);
++      struct.result = new TResult();
++      struct.result.read(iprot);
++      struct.setResultIsSet(true);
++    }
++  }
++
++}
++
+Index: hbase-thrift/src/main/resources/org/apache/hadoop/hbase/thrift2/hbase.thrift
+===================================================================
+--- hbase-thrift/src/main/resources/org/apache/hadoop/hbase/thrift2/hbase.thrift	(revision 705)
++++ hbase-thrift/src/main/resources/org/apache/hadoop/hbase/thrift2/hbase.thrift	(revision 709)
+@@ -68,6 +68,11 @@
+   2: required list<TColumnValue> columnValues
+ }
+ 
++struct TProcessedAndResult {
++  1: required bool processed,
++  2: required TResult result
++}
++
+ /**
+  * Specify type of delete:
+  *  - DELETE_COLUMN means exactly one version will be removed,
+@@ -602,4 +607,33 @@
+     /** row mutations to execute if the value matches */
+     7: required TRowMutations rowMutations
+   ) throws (1: TIOError io)
++
++  /**
++   * The same as checkAndMutate, get return the original row at the same time.
++   *
++   * @return true if the row was mutated, false otherwise
++   */
++  TProcessedAndResult checkAndMutateAndGetRow(
++    /** to check in and delete from */
++    1: required binary table,
++
++    /** row to check */
++    2: required binary row,
++
++    /** column family to check */
++    3: required binary family,
++
++    /** column qualifier to check */
++    4: required binary qualifier,
++
++    /** comparison to make on the value */
++    5: required TCompareOp compareOp,
++
++    /** the expected value to be compared against, if not provided the
++        check is for the non-existence of the column in question */
++    6: binary value,
++
++    /** row mutations to execute if the value matches */
++    7: required TRowMutations rowMutations
++  ) throws (1: TIOError io)
+ }

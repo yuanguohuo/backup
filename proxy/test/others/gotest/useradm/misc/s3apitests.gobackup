@@ -1,0 +1,204 @@
+//package main
+//
+//import "fmt"
+//
+//func main() {
+//	fmt.Println("vim-go")
+//}
+package main
+
+import (
+	"bytes"
+	"fmt"
+	//	"github.com/bitly/go-simplejson"
+	"github.com/docopt/docopt-go"
+	"github.com/smartystreets/go-aws-auth"
+	"github.com/verdverm/frisby"
+	"log"
+	"net/http"
+	//	"net/http/httputil"
+)
+
+//const usage = `usage`
+//sneaker rm <path>
+const usage = `s3apitests  manage cli.
+Usage:
+  s3apitests ls [<pattern>]
+  s3apitests upload <file> <path>
+  s3apitests download <path> <file>
+  s3apitests rm <path>
+  s3apitests pack <pattern> <file> [--key=<id>] [--context=<k1=v2,k2=v2>]
+  s3apitests unpack <file> <path> [--context=<k1=v2,k2=v2>]
+  s3apitests rotate [<pattern>]
+  s3apitests version
+  s3apitests --uid=<name>
+Options:
+  -h --help  Show this help information.
+Environment Variables:
+  ROOT_AKEY      The KMS key to use when encrypting secrets.
+  ROOT_SKEY      Secret key 
+  S3_PATH         Where secrets will be stored (e.g. s3://bucket/path).
+`
+
+//version := 1
+//goVersion := 1.8.3
+
+//buildTime := 2014
+var (
+	version   = "v1"       // version of sneaker
+	goVersion = "v1.8.3"   // version of go we build with
+	buildTime = "20170718" // time of build
+)
+
+func main() {
+	fmt.Println("Frisby!\n")
+	//	frisby.Create("Test GET Go homepage").
+	//		Get("http://golang.org").
+	//		Send().
+	//		ExpectStatus(200).
+	//		ExpectContent("The Go Programming Language")
+	args, err := docopt.Parse(usage, nil, true, version, false)
+	if err != nil {
+		log.Fatal(err)
+	}
+	var buf bytes.Buffer
+	logger := log.New(&buf, "logger: ", log.Lshortfile)
+	logger.Print("uid args") //why not output to standard console
+	logger.Print("uid args: %s", args["--uid"])
+	//	fmt.Printf("uid args")
+	//	fmt.Printf("uid args: %s", args["--uid"])
+
+	if args["version"] == true {
+		fmt.Printf(
+			"version: %s\ngoversion: %s\nbuildtime: %s\n",
+			version, goVersion, buildTime,
+		)
+		return
+	}
+	//	manager := loadManager()
+	//https://github.com/codahale/sneaker/blob/master/cmd/sneaker/main.go
+	//cli write
+	var url string
+	var user string
+	if s, ok := args["--uid"].(string); ok {
+		url = s
+		var b string
+		b = "http://192.168.56.101:6080/admin/user?uid="
+		url = b + url + "&quota-type=user&max-size-kb=10000000&max-objects=10000&enabled=-1"
+		user = s
+	} else {
+		url = "http://192.168.56.101:6080/admin/user?uid=uuuuuuu8&quota-type=user&max-size-kb=10000000&max-objects=10000&enabled=-1"
+	}
+	//	if args["--uid"] != nil {
+	//		var s string
+	//		s = "http://192.168.56.101:6080/admin/user?uid="
+	//		url = s + args["--uid"].(string) + "&quota-type=user&max-size-kb=10000000&max-objects=10000&enabled=-1"
+	//
+	//	} else {
+	//		url = "http://192.168.56.101:6080/admin/user?uid=uuuuuuu8&quota-type=user&max-size-kb=10000000&max-objects=10000&enabled=-1"
+	//	}
+
+	//	client := new(http.Client)
+
+	req, _ := http.NewRequest("PUT", url, nil)
+
+	//modify req
+	//req1 := awsauth.SignS3(req, awsauth.Credentials{
+	awsauth.SignS3(req, awsauth.Credentials{
+		//awsauth.Sign(req, awsauth.Credentials{
+		//need http.request conversion to request.request.https://github.com/mozillazg/request/blob/master/request.go
+		// a,library aws-auth use the mozill request
+
+		// b,hear converse to mozill request: first create http.Client, create http req,sign(data,auth),
+		//then from this req, get client,get date,get auth,get all headers
+		//then create frisby do....
+		// we use this mothod.
+
+		//awsauth.SignS3(F.Req, awsauth.Credentials{
+		AccessKeyID:     "8C9TU7JU9OL1TMGUD7MC",
+		SecretAccessKey: "ZTydkPh5819CwoXy7rteSBeRRqjAAS2Fw8t25jTU",
+		//	SecurityToken: "Security Token",	// STS (optional)
+	}) // Automatically chooses the best signing mechanism for the service
+
+	//	fmt.Println("headers0: %s", req.Header.Get("Date"))
+	//	fmt.Println("headers1: %s", req.Header["Date"])
+	//	//	fmt.Println("headers2: %s", req.Header["date"])
+	//	if v := req.Header["Date"]; len(v) > 0 {
+	//		//	return v[0]
+	//		fmt.Println("headers3: %s", v[0])
+	//	}
+	//	for k, vv := range req.Header {
+	//		//  		vv2 := make([]string, len(vv))
+	//		//  		copy(vv2, vv)
+	//		//  		h2[k] = vv2
+	//
+	//		fmt.Println("headers41: %s", k, vv[0])
+	//		fmt.Println("headers42: %s", k, vv) //array print
+	//	}
+	//
+	//	requestDump, err := httputil.DumpRequest(req, true)
+	//	if err != nil {
+	//		fmt.Println(err)
+	//	}
+	//	fmt.Println(string(requestDump))
+
+	// create an object with a given name (used in the report)
+	// internal create client!!!!
+	// should we copy all headers from http.client ,whether is Date or Authori, and other?,such as md5,content-type:..
+	//	F := frisby.Create("Test successful user create").Put(url).SetHeader("Date", req.Header.Get("Date")).
+	//		SetHeader("Authorization", req.Header.Get("Authorization"))
+	//	F.SetHeader("Content-Type", "")
+	F := frisby.Create("Test successful user create").Put(url)
+
+	//	F.SetHeaders()
+	for k, vv := range req.Header {
+		//  		vv2 := make([]string, len(vv))
+		//		//  		copy(vv2, vv)
+		//		//  		h2[k] = vv2
+		//
+		//		fmt.Println("headers41: %s", k, vv[0])
+		//		fmt.Println("headers42: %s", k, vv) //array print
+		for _, n := range vv {
+			F.SetHeader(k, n) //contact or first
+		}
+
+	}
+	F.SetHeader("Content-Type", "")
+
+	// url prefix /. now omit
+	//		SetHeader("Accept", "application/json, text/plain, */*").
+	//			SetJson([]string{"item1", "item2", "item3"})
+
+	//resp, err := client.Do(req)
+	//_, err1 := client.Do(req)
+
+	//client.Do(req)
+	//err1 := F.Send()
+	F.Send()
+	//	if err1 != nil {
+	//		return
+	//	}
+	F.ExpectStatus(200)
+	//	F.PrintBody()
+	F.ExpectContent("keys")
+	//	F.ExpectJson("", "keys") //pretty all
+	//	[map   [email: op_mask:[read write delete] display_name:ttttt2 bucket_quota:map[max_size_kb:-1 enabled:-1 max_objects:-1] caps:map[] keys:map[user:ttttt2 secret_key:lzeoWSqJL7ApCqsnUBhkYDRFmFh5fFzQGyn6Dh5Y access_key:JHTX9INOF44MHAWBFBD5] max_buckets:1024 user_quota:map[enabled:-1 max_objects:10000 max_size_kb:10000000] suspended:0 exattrs:map[company:1024] user_id:ttttt2]    ]
+
+	F.ExpectJson("0.keys.user", user)
+	//debug
+	//	simp_json, err := F.Resp.Json()
+	//	if err != nil {
+	//		F.AddError(err.Error())
+	//		//		return F
+	//	}
+	//	fmt.Println("json parse:", simp_json.GetIndex(0).Get("keys"))
+
+	frisby.Global.PrintReport()
+	//	err := F.Error()
+
+	errs := F.Errors()
+	for _, e := range errs {
+		fmt.Println("Error: ", e)
+	}
+
+}

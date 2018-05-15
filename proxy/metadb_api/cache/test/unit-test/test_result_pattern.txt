@@ -1,0 +1,1064 @@
+Create hbase: 	127.0.0.1	8000	binary	framed
+[INFO]	RequestID=TestReqID Create Parent of RCache
+[INFO]	RequestID=TestReqID Create RCache
+[INFO]	RequestID=TestReqID Create Parent of LCache
+Create resty.lrucache, items=2000
+[INFO]	RequestID=TestReqID Create LCache
+[INFO]	RequestID=TestReqID RCache __cache_index_func key=quickScan member-type=function
+[INFO]	RequestID=TestReqID LCache __cache_index_func key=quickScan member-type=function
+params=	{
+    [numRows]=100
+    [startRow]=1234
+    [stopRow]=5678
+    [table_name]=user
+    [columns]={
+        [1]=info
+    }
+    [self]={
+        [enabled]=true
+    }
+}
+[INFO]	RequestID=TestReqID RCache __cache_index_func key=server member-type=string
+[INFO]	RequestID=TestReqID LCache __cache_index_func key=server member-type=string
+[INFO]	RequestID=TestReqID RCache __cache_index_func key=port member-type=string
+[INFO]	RequestID=TestReqID LCache __cache_index_func key=port member-type=string
+[INFO]	RequestID=TestReqID RCache __cache_index_func key=protocol member-type=string
+[INFO]	RequestID=TestReqID LCache __cache_index_func key=protocol member-type=string
+quickScan	127.0.0.1	8000	binary
+user	1234	5678	nil
+===============Test get=================
+[INFO]	RequestID=TestReqID LCache Enter get() table_name=user key=123 columns={
+    [1]=info:info1
+    [2]=info:info2
+    [3]=yyy:yyy1
+    [4]=stats:objects
+    [5]=stats:size_bytes
+    [6]=quota:quota1
+    [7]=stats:statsDEF
+    [8]=xxx:xxx1
+    [9]=stats:statsABC
+}
+[INFO]	RequestID=TestReqID LCache get columns: policy=very-stable cols={
+    [1]=info:info1
+    [2]=info:info2
+    [3]=quota:quota1
+}
+[INFO]	RequestID=TestReqID LCache Enter process_get() policy=very-stable table_name=user key=123 columns={
+    [1]=info:info1
+    [2]=info:info2
+    [3]=quota:quota1
+}
+[INFO]	RequestID=TestReqID LCache row user_123 key info:info1 hit
+[INFO]	RequestID=TestReqID LCache row user_123 key info:info2 missed
+[INFO]	RequestID=TestReqID LCache row user_123 key quota:quota1 missed
+Miss/Hit: lcache_miss
+[INFO]	RequestID=TestReqID LCache miss
+[INFO]	RequestID=TestReqID LCache get from backstore:{
+    [1]=yyy:yyy1
+    [2]=stats:objects
+    [3]=stats:size_bytes
+    [4]=stats:statsDEF
+    [5]=xxx:xxx1
+    [6]=stats:statsABC
+    [7]=info:info2
+    [8]=quota:quota1
+}
+[INFO]	RequestID=TestReqID RCache Enter get() table_name=user key=123 columns={
+    [1]=yyy:yyy1
+    [2]=stats:objects
+    [3]=stats:size_bytes
+    [4]=stats:statsDEF
+    [5]=xxx:xxx1
+    [6]=stats:statsABC
+    [7]=info:info2
+    [8]=quota:quota1
+}
+[INFO]	RequestID=TestReqID RCache get columns: policy=very-stable cols={
+    [1]=info:info2
+    [2]=quota:quota1
+}
+[INFO]	RequestID=TestReqID RCache Enter process_get() policy=very-stable table_name=user key=123 columns={
+    [1]=info:info2
+    [2]=quota:quota1
+}
+do_cmd_quick:	hmget	user_123	info:info2	quota:quota1
+fields:	{
+    [1]=info:info2
+    [2]=quota:quota1
+}
+result:	{
+    [1]=Redis Value of hash user_123 field info:info2
+    [2]=NULL
+}
+[INFO]	RequestID=TestReqID RCache get columns: policy=stats cols={
+    [1]=stats:objects
+    [2]=stats:size_bytes
+    [3]=stats:statsDEF
+    [4]=stats:statsABC
+}
+[INFO]	RequestID=TestReqID RCache Enter process_get() policy=stats table_name=user key=123 columns={
+    [1]=stats:objects
+    [2]=stats:size_bytes
+    [3]=stats:statsDEF
+    [4]=stats:statsABC
+}
+do_cmd_quick:	mget	{user_123}_stats:objects_base	{user_123}_stats:objects_incr	{user_123}_stats:size_bytes_base	{user_123}_stats:size_bytes_incr	{user_123}_stats:statsDEF_base	{user_123}_stats:statsDEF_incr	{user_123}_stats:statsABC_base	{user_123}_stats:statsABC_incr
+keys:	{
+    [1]={user_123}_stats:objects_base
+    [2]={user_123}_stats:objects_incr
+    [3]={user_123}_stats:size_bytes_base
+    [4]={user_123}_stats:size_bytes_incr
+    [5]={user_123}_stats:statsDEF_base
+    [6]={user_123}_stats:statsDEF_incr
+    [7]={user_123}_stats:statsABC_base
+    [8]={user_123}_stats:statsABC_incr
+}
+result:	{
+    [1]=NULL
+    [2]=NULL
+    [3]=3000
+    [4]=NULL
+    [5]=NULL
+    [6]=40
+    [7]=3000
+    [8]=456
+}
+Miss/Hit: rcache_miss
+[INFO]	RequestID=TestReqID RCache miss
+[INFO]	RequestID=TestReqID RCache get from backstore:{
+    [1]=yyy:yyy1
+    [2]=xxx:xxx1
+    [3]=quota:quota1
+    [4]=stats:objects
+    [5]=stats:statsDEF
+}
+[INFO]	RequestID=TestReqID RCache backstore returned:{
+    [quota:quota1]=HBase Value quota:quota1
+    [stats:objects]=10000000
+    [yyy:yyy1]=HBase Value yyy:yyy1
+    [stats:statsDEF]=10000000
+    [xxx:xxx1]=HBase Value xxx:xxx1
+}
+[INFO]	RequestID=TestReqID RCache update cache:{
+    [stats]={
+        [stats:objects]=10000000
+        [stats:statsDEF]=10000000
+    }
+    [very-stable]={
+        [quota:quota1]=HBase Value quota:quota1
+    }
+}
+[INFO]	RequestID=TestReqID RCache Enter update_cache() policy=very-stable table_name=user key=123 to_cache={
+    [quota:quota1]=HBase Value quota:quota1
+}
+do_cmd_quick:	hmset	user_123	quota:quota1	HBase Value quota:quota1
+hmset vals:	{
+    [1]=quota:quota1
+    [2]=HBase Value quota:quota1
+}
+do_cmd_quick:	expire	user_123	6000
+[INFO]	RequestID=TestReqID RCache Enter update_cache() policy=stats table_name=user key=123 to_cache={
+    [stats:objects]=10000000
+    [stats:statsDEF]=10000000
+}
+do_cmd_quick:	mset	{user_123}_stats:objects_base	10000000	{user_123}_stats:statsDEF_base	10000000
+mset vals:	{
+    [1]={user_123}_stats:objects_base
+    [2]=10000000
+    [3]={user_123}_stats:statsDEF_base
+    [4]=10000000
+}
+[INFO]	RequestID=TestReqID LCache backstore returned:{
+    [quota:quota1]=HBase Value quota:quota1
+    [stats:statsABC]=3456
+    [stats:objects]=10000000
+    [yyy:yyy1]=HBase Value yyy:yyy1
+    [xxx:xxx1]=HBase Value xxx:xxx1
+    [stats:size_bytes]=3000
+    [stats:statsDEF]=10000000
+    [info:info2]=Redis Value of hash user_123 field info:info2
+}
+[INFO]	RequestID=TestReqID LCache update cache:{
+    [very-stable]={
+        [quota:quota1]=HBase Value quota:quota1
+        [info:info2]=Redis Value of hash user_123 field info:info2
+    }
+}
+[INFO]	RequestID=TestReqID LCache Enter update_cache() policy=very-stable table_name=user key=123 to_cache={
+    [quota:quota1]=HBase Value quota:quota1
+    [info:info2]=Redis Value of hash user_123 field info:info2
+}
+[INFO]	RequestID=TestReqID LCache set row user_123 quota:quota1=HBase Value quota:quota1
+[INFO]	RequestID=TestReqID LCache set row user_123 info:info2=Redis Value of hash user_123 field info:info2
+errcode=	0000
+ok=	true
+ret=	{
+    [info:info1]=LCache value for info:info1
+    [quota:quota1]=HBase Value quota:quota1
+    [stats:statsABC]=3456
+    [stats:objects]=10000000
+    [yyy:yyy1]=HBase Value yyy:yyy1
+    [stats:statsDEF]=10000000
+    [stats:size_bytes]=3000
+    [xxx:xxx1]=HBase Value xxx:xxx1
+    [info:info2]=Redis Value of hash user_123 field info:info2
+}
+===============Test increment===========
+[INFO]	RequestID=TestReqID LCache Enter increment() table_name=user key=123 colValues={
+    [1]=stats
+    [2]=objects
+    [3]=1
+    [4]=stats
+    [5]=size_bytes
+    [6]=10240
+    [7]=xxx
+    [8]=xxx1
+    [9]=3
+    [10]=xxx
+    [11]=xxx2
+    [12]=4
+}
+Miss/Hit: lcache_back_increment
+[INFO]	RequestID=TestReqID LCache increment columns/counters in backstore: retry=1 {
+    [1]=stats
+    [2]=objects
+    [3]=1
+    [4]=stats
+    [5]=size_bytes
+    [6]=10240
+    [7]=xxx
+    [8]=xxx1
+    [9]=3
+    [10]=xxx
+    [11]=xxx2
+    [12]=4
+}
+[INFO]	RequestID=TestReqID RCache Enter increment() table_name=user key=123 colValues={
+    [1]=stats
+    [2]=objects
+    [3]=1
+    [4]=stats
+    [5]=size_bytes
+    [6]=10240
+    [7]=xxx
+    [8]=xxx1
+    [9]=3
+    [10]=xxx
+    [11]=xxx2
+    [12]=4
+}
+Miss/Hit: rcache_cache_increment
+[INFO]	RequestID=TestReqID RCache increment columns/counters: policy=stats colValues={
+    [1]=stats
+    [2]=objects
+    [3]=1
+    [4]=stats
+    [5]=size_bytes
+    [6]=10240
+}
+[INFO]	RequestID=TestReqID RCache Enter process_increment() policy=stats table_name=user key=123 colValues={
+    [1]=stats
+    [2]=objects
+    [3]=1
+    [4]=stats
+    [5]=size_bytes
+    [6]=10240
+}
+do_cmd_quick:	incrby	{user_123}_stats:objects_incr	1
+current	20
+do_cmd_quick:	get	{user_123}_stats:objects_base
+200000000
+do_cmd_quick:	incrby	{user_123}_stats:size_bytes_incr	10240
+current	204800
+do_cmd_quick:	get	{user_123}_stats:size_bytes_base
+200000000
+do_cmd_quick:	getset	{user_123}_stats:size_bytes_incr	0
+current	234567
+Miss/Hit: rcache_back_increment
+[INFO]	RequestID=TestReqID RCache increment columns/counters in backstore: retry=1 {
+    [1]=xxx
+    [2]=xxx1
+    [3]=3
+    [4]=xxx
+    [5]=xxx2
+    [6]=4
+    [7]=stats
+    [8]=size_bytes
+    [9]=234567
+}
+HBase increment:	{
+    [1]=xxx
+    [2]=xxx1
+    [3]=3
+    [4]=xxx
+    [5]=xxx2
+    [6]=4
+    [7]=stats
+    [8]=size_bytes
+    [9]=234567
+}
+HBase current:	{
+    [xxx:xxx1]=300000003
+    [xxx:xxx2]=300000004
+    [stats:size_bytes]=300234567
+}
+[INFO]	RequestID=TestReqID RCache backstore current={
+    [xxx:xxx1]=300000003
+    [xxx:xxx2]=300000004
+    [stats:size_bytes]=300234567
+}
+[INFO]	RequestID=TestReqID RCache update the base part of columns/counters:{
+    [stats:size_bytes]=300234567
+}
+[INFO]	RequestID=TestReqID RCache Enter update_cache() policy=stats table_name=user key=123 to_cache={
+    [stats:size_bytes]=300234567
+}
+do_cmd_quick:	mset	{user_123}_stats:size_bytes_base	300234567
+mset vals:	{
+    [1]={user_123}_stats:size_bytes_base
+    [2]=300234567
+}
+[INFO]	RequestID=TestReqID LCache backstore current={
+    [stats:objects]=200000020
+    [xxx:xxx1]=300000003
+    [xxx:xxx2]=300000004
+    [stats:size_bytes]=300234567
+}
+errcode=	0000
+ok=	true
+ret=	{
+    [stats:objects]=200000020
+    [xxx:xxx1]=300000003
+    [xxx:xxx2]=300000004
+    [stats:size_bytes]=300234567
+}
+===============Test put=================
+[INFO]	RequestID=TestReqID LCache Enter put() table_name=user key=123 colValues={
+    [1]=info
+    [2]=info1
+    [3]=11111111
+    [4]=info
+    [5]=info2
+    [6]=22222222
+    [7]=quota
+    [8]=quota1
+    [9]=33333333
+    [10]=yyy
+    [11]=yyy1
+    [12]=xxxxxxxx
+} ttl=8000
+Miss/Hit: lcache_back_put
+[INFO]	RequestID=TestReqID LCache put into backstore:{
+    [1]=info
+    [2]=info1
+    [3]=11111111
+    [4]=info
+    [5]=info2
+    [6]=22222222
+    [7]=quota
+    [8]=quota1
+    [9]=33333333
+    [10]=yyy
+    [11]=yyy1
+    [12]=xxxxxxxx
+}
+[INFO]	RequestID=TestReqID RCache Enter put() table_name=user key=123 colValues={
+    [1]=info
+    [2]=info1
+    [3]=11111111
+    [4]=info
+    [5]=info2
+    [6]=22222222
+    [7]=quota
+    [8]=quota1
+    [9]=33333333
+    [10]=yyy
+    [11]=yyy1
+    [12]=xxxxxxxx
+} ttl=8000
+Miss/Hit: rcache_back_put
+[INFO]	RequestID=TestReqID RCache put into backstore:{
+    [1]=info
+    [2]=info1
+    [3]=11111111
+    [4]=info
+    [5]=info2
+    [6]=22222222
+    [7]=quota
+    [8]=quota1
+    [9]=33333333
+    [10]=yyy
+    [11]=yyy1
+    [12]=xxxxxxxx
+}
+Put into HBase: 	{
+    [1]=info
+    [2]=info1
+    [3]=11111111
+    [4]=info
+    [5]=info2
+    [6]=22222222
+    [7]=quota
+    [8]=quota1
+    [9]=33333333
+    [10]=yyy
+    [11]=yyy1
+    [12]=xxxxxxxx
+}
+Miss/Hit: rcache_cache_put
+[INFO]	RequestID=TestReqID RCache Enter process_put() policy=very-stable table_name=user key=123 colValues={
+    [1]=info
+    [2]=info1
+    [3]=11111111
+    [4]=info
+    [5]=info2
+    [6]=22222222
+    [7]=quota
+    [8]=quota1
+    [9]=33333333
+}
+[INFO]	RequestID=TestReqID RCache Enter update_cache() policy=very-stable table_name=user key=123 to_cache={
+    [quota:quota1]=33333333
+    [info:info1]=11111111
+    [info:info2]=22222222
+}
+do_cmd_quick:	hmset	user_123	quota:quota1	33333333	info:info1	11111111	info:info2	22222222
+hmset vals:	{
+    [1]=quota:quota1
+    [2]=33333333
+    [3]=info:info1
+    [4]=11111111
+    [5]=info:info2
+    [6]=22222222
+}
+do_cmd_quick:	expire	user_123	6000
+Miss/Hit: lcache_cache_put
+[INFO]	RequestID=TestReqID LCache Enter process_put() policy=very-stable table_name=user key=123 colValues={
+    [1]=info
+    [2]=info1
+    [3]=11111111
+    [4]=info
+    [5]=info2
+    [6]=22222222
+    [7]=quota
+    [8]=quota1
+    [9]=33333333
+}
+[INFO]	RequestID=TestReqID LCache Enter update_cache() policy=very-stable table_name=user key=123 to_cache={
+    [quota:quota1]=33333333
+    [info:info1]=11111111
+    [info:info2]=22222222
+}
+[INFO]	RequestID=TestReqID LCache set row user_123 quota:quota1=33333333
+[INFO]	RequestID=TestReqID LCache set row user_123 info:info1=11111111
+[INFO]	RequestID=TestReqID LCache set row user_123 info:info2=22222222
+errcode=	0000
+ok=	true
+===============Test checkAndPut=================
+[INFO]	RequestID=TestReqID LCache Enter checkAndPut() table_name=user key=123 checkFamily=info checkColumn=info1 checkValue=xyz colValues={
+    [1]=info
+    [2]=info1
+    [3]=AAAAAAAA
+    [4]=info
+    [5]=info2
+    [6]=BBBBBBBB
+    [7]=quota
+    [8]=quota1
+    [9]=CCCCCCCC
+    [10]=yyy
+    [11]=yyy1
+    [12]=xxxxxxxx
+}
+Miss/Hit: lcache_back_checkAndPut
+[INFO]	RequestID=TestReqID LCache checkAndPut into backstore:{
+    [1]=info
+    [2]=info1
+    [3]=AAAAAAAA
+    [4]=info
+    [5]=info2
+    [6]=BBBBBBBB
+    [7]=quota
+    [8]=quota1
+    [9]=CCCCCCCC
+    [10]=yyy
+    [11]=yyy1
+    [12]=xxxxxxxx
+}
+[INFO]	RequestID=TestReqID RCache Enter checkAndPut() table_name=user key=123 checkFamily=info checkColumn=info1 checkValue=xyz colValues={
+    [1]=info
+    [2]=info1
+    [3]=AAAAAAAA
+    [4]=info
+    [5]=info2
+    [6]=BBBBBBBB
+    [7]=quota
+    [8]=quota1
+    [9]=CCCCCCCC
+    [10]=yyy
+    [11]=yyy1
+    [12]=xxxxxxxx
+}
+Miss/Hit: rcache_back_checkAndPut
+[INFO]	RequestID=TestReqID RCache checkAndPut into backstore:{
+    [1]=info
+    [2]=info1
+    [3]=AAAAAAAA
+    [4]=info
+    [5]=info2
+    [6]=BBBBBBBB
+    [7]=quota
+    [8]=quota1
+    [9]=CCCCCCCC
+    [10]=yyy
+    [11]=yyy1
+    [12]=xxxxxxxx
+}
+checkAndPut into HBase: 	{
+    [1]=info
+    [2]=info1
+    [3]=AAAAAAAA
+    [4]=info
+    [5]=info2
+    [6]=BBBBBBBB
+    [7]=quota
+    [8]=quota1
+    [9]=CCCCCCCC
+    [10]=yyy
+    [11]=yyy1
+    [12]=xxxxxxxx
+}
+Miss/Hit: rcache_cache_checkAndPut
+[INFO]	RequestID=TestReqID RCache Enter process_checkAndPut() policy=very-stable table_name=user key=123 colValues={
+    [1]=info
+    [2]=info1
+    [3]=AAAAAAAA
+    [4]=info
+    [5]=info2
+    [6]=BBBBBBBB
+    [7]=quota
+    [8]=quota1
+    [9]=CCCCCCCC
+}
+[INFO]	RequestID=TestReqID RCache Enter process_put() policy=very-stable table_name=user key=123 colValues={
+    [1]=info
+    [2]=info1
+    [3]=AAAAAAAA
+    [4]=info
+    [5]=info2
+    [6]=BBBBBBBB
+    [7]=quota
+    [8]=quota1
+    [9]=CCCCCCCC
+}
+[INFO]	RequestID=TestReqID RCache Enter update_cache() policy=very-stable table_name=user key=123 to_cache={
+    [quota:quota1]=CCCCCCCC
+    [info:info1]=AAAAAAAA
+    [info:info2]=BBBBBBBB
+}
+do_cmd_quick:	hmset	user_123	quota:quota1	CCCCCCCC	info:info1	AAAAAAAA	info:info2	BBBBBBBB
+hmset vals:	{
+    [1]=quota:quota1
+    [2]=CCCCCCCC
+    [3]=info:info1
+    [4]=AAAAAAAA
+    [5]=info:info2
+    [6]=BBBBBBBB
+}
+do_cmd_quick:	expire	user_123	6000
+Miss/Hit: lcache_cache_checkAndPut
+[INFO]	RequestID=TestReqID LCache Enter process_checkAndPut() policy=very-stable table_name=user key=123 colValues={
+    [1]=info
+    [2]=info1
+    [3]=AAAAAAAA
+    [4]=info
+    [5]=info2
+    [6]=BBBBBBBB
+    [7]=quota
+    [8]=quota1
+    [9]=CCCCCCCC
+}
+[INFO]	RequestID=TestReqID LCache Enter process_put() policy=very-stable table_name=user key=123 colValues={
+    [1]=info
+    [2]=info1
+    [3]=AAAAAAAA
+    [4]=info
+    [5]=info2
+    [6]=BBBBBBBB
+    [7]=quota
+    [8]=quota1
+    [9]=CCCCCCCC
+}
+[INFO]	RequestID=TestReqID LCache Enter update_cache() policy=very-stable table_name=user key=123 to_cache={
+    [quota:quota1]=CCCCCCCC
+    [info:info1]=AAAAAAAA
+    [info:info2]=BBBBBBBB
+}
+[INFO]	RequestID=TestReqID LCache set row user_123 quota:quota1=CCCCCCCC
+[INFO]	RequestID=TestReqID LCache set row user_123 info:info1=AAAAAAAA
+[INFO]	RequestID=TestReqID LCache set row user_123 info:info2=BBBBBBBB
+errcode=	0000
+ok=	true
+===============Test delete entire row==============
+[INFO]	RequestID=TestReqID LCache Enter delete() table_name=user key=123 columns=nil
+Miss/Hit: lcache_back_delete
+[INFO]	RequestID=TestReqID LCache delete entire row from backstore: key=user_123
+[INFO]	RequestID=TestReqID RCache Enter delete() table_name=user key=123 columns=nil
+Miss/Hit: rcache_back_delete
+[INFO]	RequestID=TestReqID RCache delete entire row from backstore: key=user_123
+Delete entire row from HBase row=user_123
+[INFO]	RequestID=TestReqID RCache delete entire row: key=user_123
+Miss/Hit: rcache_cache_delete
+[INFO]	RequestID=TestReqID RCache Enter process_delete_row() table_name=user key=123
+do_cmd_quick:	del	user_123	{user_123}_stats:objects_base	{user_123}_stats:objects_incr	{user_123}_stats:size_bytes_base	{user_123}_stats:size_bytes_incr
+Delete keys from redis: {
+    [1]=user_123
+    [2]={user_123}_stats:objects_base
+    [3]={user_123}_stats:objects_incr
+    [4]={user_123}_stats:size_bytes_base
+    [5]={user_123}_stats:size_bytes_incr
+}
+[INFO]	RequestID=TestReqID LCache delete entire row: key=user_123
+Miss/Hit: lcache_cache_delete
+[INFO]	RequestID=TestReqID LCache Enter process_delete_row() table_name=user key=123
+errcode=	0000
+ok=	true
+===============Test delete==============
+[INFO]	RequestID=TestReqID LCache Enter delete() table_name=user key=123 columns={
+    [1]=info:info1
+    [2]=info:info2
+    [3]=yyy:yyy1
+    [4]=stats:stats1
+    [5]=xxx:xxx2
+    [6]=stats:stats2
+    [7]=quota:quota1
+    [8]=xxx:xxx1
+}
+Miss/Hit: lcache_back_delete
+[INFO]	RequestID=TestReqID LCache delete columns from backstore: key=user_123 columns={
+    [1]=info:info1
+    [2]=info:info2
+    [3]=yyy:yyy1
+    [4]=stats:stats1
+    [5]=xxx:xxx2
+    [6]=stats:stats2
+    [7]=quota:quota1
+    [8]=xxx:xxx1
+}
+[INFO]	RequestID=TestReqID RCache Enter delete() table_name=user key=123 columns={
+    [1]=info:info1
+    [2]=info:info2
+    [3]=yyy:yyy1
+    [4]=stats:stats1
+    [5]=xxx:xxx2
+    [6]=stats:stats2
+    [7]=quota:quota1
+    [8]=xxx:xxx1
+}
+Miss/Hit: rcache_back_delete
+[INFO]	RequestID=TestReqID RCache delete columns from backstore: key=user_123 columns={
+    [1]=info:info1
+    [2]=info:info2
+    [3]=yyy:yyy1
+    [4]=stats:stats1
+    [5]=xxx:xxx2
+    [6]=stats:stats2
+    [7]=quota:quota1
+    [8]=xxx:xxx1
+}
+Delete columns from HBase row=user_123 columns={
+    [1]=info:info1
+    [2]=info:info2
+    [3]=yyy:yyy1
+    [4]=stats:stats1
+    [5]=xxx:xxx2
+    [6]=stats:stats2
+    [7]=quota:quota1
+    [8]=xxx:xxx1
+}
+Miss/Hit: rcache_cache_delete
+[INFO]	RequestID=TestReqID RCache Enter process_delete() policy=very-stable table_name=user key=123 columns={
+    [1]=info:info1
+    [2]=info:info2
+    [3]=quota:quota1
+}
+do_cmd_quick:	hdel	user_123	info:info1	info:info2	quota:quota1
+Delete fields of user_123 from redis: {
+    [1]=info:info1
+    [2]=info:info2
+    [3]=quota:quota1
+}
+[INFO]	RequestID=TestReqID RCache Enter process_delete() policy=stats table_name=user key=123 columns={
+    [1]=stats:stats1
+    [2]=stats:stats2
+}
+do_cmd_quick:	del	{user_123}_stats:stats1_base	{user_123}_stats:stats1_incr	{user_123}_stats:stats2_base	{user_123}_stats:stats2_incr
+Delete keys from redis: {
+    [1]={user_123}_stats:stats1_base
+    [2]={user_123}_stats:stats1_incr
+    [3]={user_123}_stats:stats2_base
+    [4]={user_123}_stats:stats2_incr
+}
+Miss/Hit: lcache_cache_delete
+[INFO]	RequestID=TestReqID LCache Enter process_delete() policy=very-stable table_name=user key=123 columns={
+    [1]=info:info1
+    [2]=info:info2
+    [3]=quota:quota1
+}
+[INFO]	RequestID=TestReqID LCache row user_123 not cached
+errcode=	0000
+ok=	true
+===============Test checkAndDelete==============
+[INFO]	RequestID=TestReqID LCache Enter checkAndDelete() table_name=user key=123 checkFamily=infocheckColumn=info1 checkValue=xyz columns={
+    [1]=info:info1
+    [2]=info:info2
+    [3]=yyy:yyy1
+    [4]=stats:stats1
+    [5]=xxx:xxx2
+    [6]=stats:stats2
+    [7]=quota:quota1
+    [8]=xxx:xxx1
+}
+Miss/Hit: lcache_back_checkAndDelete
+[INFO]	RequestID=TestReqID LCache checkAndDelete columns from backstore: key=user_123 checkFamily=infocheckColumn=info1 checkValue=xyzcolumns={
+    [1]=info:info1
+    [2]=info:info2
+    [3]=yyy:yyy1
+    [4]=stats:stats1
+    [5]=xxx:xxx2
+    [6]=stats:stats2
+    [7]=quota:quota1
+    [8]=xxx:xxx1
+}
+[INFO]	RequestID=TestReqID RCache Enter checkAndDelete() table_name=user key=123 checkFamily=infocheckColumn=info1 checkValue=xyz columns={
+    [1]=info:info1
+    [2]=info:info2
+    [3]=yyy:yyy1
+    [4]=stats:stats1
+    [5]=xxx:xxx2
+    [6]=stats:stats2
+    [7]=quota:quota1
+    [8]=xxx:xxx1
+}
+Miss/Hit: rcache_back_checkAndDelete
+[INFO]	RequestID=TestReqID RCache checkAndDelete columns from backstore: key=user_123 checkFamily=infocheckColumn=info1 checkValue=xyzcolumns={
+    [1]=info:info1
+    [2]=info:info2
+    [3]=yyy:yyy1
+    [4]=stats:stats1
+    [5]=xxx:xxx2
+    [6]=stats:stats2
+    [7]=quota:quota1
+    [8]=xxx:xxx1
+}
+checkAndDelete from HBase: 	{
+    [1]=info:info1
+    [2]=info:info2
+    [3]=yyy:yyy1
+    [4]=stats:stats1
+    [5]=xxx:xxx2
+    [6]=stats:stats2
+    [7]=quota:quota1
+    [8]=xxx:xxx1
+}
+Miss/Hit: rcache_cache_checkAndDelete
+[INFO]	RequestID=TestReqID RCache Enter process_checkAndDelete() policy=very-stable table_name=user key=123 columns={
+    [1]=info:info1
+    [2]=info:info2
+    [3]=quota:quota1
+}
+[INFO]	RequestID=TestReqID RCache Enter process_delete() policy=very-stable table_name=user key=123 columns={
+    [1]=info:info1
+    [2]=info:info2
+    [3]=quota:quota1
+}
+do_cmd_quick:	hdel	user_123	info:info1	info:info2	quota:quota1
+Delete fields of user_123 from redis: {
+    [1]=info:info1
+    [2]=info:info2
+    [3]=quota:quota1
+}
+[INFO]	RequestID=TestReqID RCache Enter process_checkAndDelete() policy=stats table_name=user key=123 columns={
+    [1]=stats:stats1
+    [2]=stats:stats2
+}
+[INFO]	RequestID=TestReqID RCache Enter process_delete() policy=stats table_name=user key=123 columns={
+    [1]=stats:stats1
+    [2]=stats:stats2
+}
+do_cmd_quick:	del	{user_123}_stats:stats1_base	{user_123}_stats:stats1_incr	{user_123}_stats:stats2_base	{user_123}_stats:stats2_incr
+Delete keys from redis: {
+    [1]={user_123}_stats:stats1_base
+    [2]={user_123}_stats:stats1_incr
+    [3]={user_123}_stats:stats2_base
+    [4]={user_123}_stats:stats2_incr
+}
+Miss/Hit: lcache_cache_checkAndDelete
+[INFO]	RequestID=TestReqID LCache Enter process_checkAndDelete() policy=very-stable table_name=user key=123 columns={
+    [1]=info:info1
+    [2]=info:info2
+    [3]=quota:quota1
+}
+[INFO]	RequestID=TestReqID LCache Enter process_delete() policy=very-stable table_name=user key=123 columns={
+    [1]=info:info1
+    [2]=info:info2
+    [3]=quota:quota1
+}
+[INFO]	RequestID=TestReqID LCache row user_123 not cached
+errcode=	0000
+ok=	true
+===============Test checkAndMutateAndGetRow: Success==============
+[INFO]	RequestID=TestReqID RCache __cache_index_func key=CompareOp member-type=table
+[INFO]	RequestID=TestReqID LCache __cache_index_func key=CompareOp member-type=table
+[INFO]	RequestID=TestReqID LCache Enter checkAndMutateAndGetRow() table_name=user key=ABCD checkFamily=info checkColumn=info1 compareOp=5 checkValue=bbbb 
+put={
+    [1]=info
+    [2]=info1
+    [3]=info1-value
+    [4]=ver
+    [5]=ver1
+    [6]=ver1-value
+    [7]=xxx
+    [8]=xxx1
+    [9]=xxx1-value
+} 
+del={
+    [1]=stats:stats1
+} 
+ttl=8000
+[INFO]	RequestID=TestReqID RCache Enter checkAndMutateAndGetRow() table_name=user key=ABCD checkFamily=info checkColumn=info1 compareOp=5 checkValue=bbbb 
+put={
+    [1]=info
+    [2]=info1
+    [3]=info1-value
+    [4]=ver
+    [5]=ver1
+    [6]=ver1-value
+    [7]=xxx
+    [8]=xxx1
+    [9]=xxx1-value
+} 
+del={
+    [1]=stats:stats1
+} 
+ttl=8000
+Enter HBase checkAndMutateAndGetRow
+table_name=	user
+key=	ABCD
+checkFamily=	info
+checkColumn=	info1
+compareOp=	5
+checkValue=	bbbb
+put=	{
+    [1]=info
+    [2]=info1
+    [3]=info1-value
+    [4]=ver
+    [5]=ver1
+    [6]=ver1-value
+    [7]=xxx
+    [8]=xxx1
+    [9]=xxx1-value
+}
+del=	{
+    [1]=stats:stats1
+}
+ttl=	8000
+condition met: 	bbbb	>	aaaa-info:info1-origin
+OriginRow: 	{
+    [info:info1]=aaaa-info:info1-origin
+    [stats:stats1]=aaaa-stats:stats1-origin
+    [stats:stats3]=aaaa-stats:stats3-origin
+    [info:info2]=aaaa-info:info2-origin
+    [zzzz:zzzz1]=aaaa-zzzz:zzzz1-origin
+}
+[INFO]	RequestID=TestReqID RCache Enter process_put() policy=very-stable table_name=user key=ABCD colValues={
+    [1]=info
+    [2]=info1
+    [3]=info1-value
+    [4]=ver
+    [5]=ver1
+    [6]=ver1-value
+}
+[INFO]	RequestID=TestReqID RCache Enter update_cache() policy=very-stable table_name=user key=ABCD to_cache={
+    [info:info1]=info1-value
+    [ver:ver1]=ver1-value
+}
+do_cmd_quick:	hmset	user_ABCD	info:info1	info1-value	ver:ver1	ver1-value
+hmset vals:	{
+    [1]=info:info1
+    [2]=info1-value
+    [3]=ver:ver1
+    [4]=ver1-value
+}
+do_cmd_quick:	expire	user_ABCD	6000
+[INFO]	RequestID=TestReqID RCache Enter process_delete() policy=stats table_name=user key=ABCD columns={
+    [1]=stats:stats1
+}
+do_cmd_quick:	del	{user_ABCD}_stats:stats1_base	{user_ABCD}_stats:stats1_incr
+Delete keys from redis: {
+    [1]={user_ABCD}_stats:stats1_base
+    [2]={user_ABCD}_stats:stats1_incr
+}
+[INFO]	RequestID=TestReqID LCache Enter process_put() policy=very-stable table_name=user key=ABCD colValues={
+    [1]=info
+    [2]=info1
+    [3]=info1-value
+    [4]=ver
+    [5]=ver1
+    [6]=ver1-value
+}
+[INFO]	RequestID=TestReqID LCache Enter update_cache() policy=very-stable table_name=user key=ABCD to_cache={
+    [info:info1]=info1-value
+    [ver:ver1]=ver1-value
+}
+[INFO]	RequestID=TestReqID LCache cache row user_ABCD
+[INFO]	RequestID=TestReqID LCache set row user_ABCD info:info1=info1-value
+[INFO]	RequestID=TestReqID LCache set row user_ABCD ver:ver1=ver1-value
+errcode=	0000
+ok=	true
+origin=	{
+    [info:info1]=aaaa-info:info1-origin
+    [stats:stats1]=aaaa-stats:stats1-origin
+    [stats:stats3]=aaaa-stats:stats3-origin
+    [info:info2]=aaaa-info:info2-origin
+    [zzzz:zzzz1]=aaaa-zzzz:zzzz1-origin
+}
+===============Test checkAndMutateAndGetRow: Condition-check-failure==============
+[INFO]	RequestID=TestReqID RCache __cache_index_func key=CompareOp member-type=table
+[INFO]	RequestID=TestReqID LCache __cache_index_func key=CompareOp member-type=table
+[INFO]	RequestID=TestReqID LCache Enter checkAndMutateAndGetRow() table_name=user key=EFGH checkFamily=info checkColumn=info1 compareOp=5 checkValue=000aaaa 
+put={
+    [1]=info
+    [2]=info1
+    [3]=info1-value-value
+    [4]=ver
+    [5]=ver1
+    [6]=ver1-value-value
+    [7]=xxx
+    [8]=xxx1
+    [9]=xxx1-value-value
+} 
+del={
+    [1]=stats:stats2
+} 
+ttl=16000
+[INFO]	RequestID=TestReqID RCache Enter checkAndMutateAndGetRow() table_name=user key=EFGH checkFamily=info checkColumn=info1 compareOp=5 checkValue=000aaaa 
+put={
+    [1]=info
+    [2]=info1
+    [3]=info1-value-value
+    [4]=ver
+    [5]=ver1
+    [6]=ver1-value-value
+    [7]=xxx
+    [8]=xxx1
+    [9]=xxx1-value-value
+} 
+del={
+    [1]=stats:stats2
+} 
+ttl=16000
+Enter HBase checkAndMutateAndGetRow
+table_name=	user
+key=	EFGH
+checkFamily=	info
+checkColumn=	info1
+compareOp=	5
+checkValue=	000aaaa
+put=	{
+    [1]=info
+    [2]=info1
+    [3]=info1-value-value
+    [4]=ver
+    [5]=ver1
+    [6]=ver1-value-value
+    [7]=xxx
+    [8]=xxx1
+    [9]=xxx1-value-value
+}
+del=	{
+    [1]=stats:stats2
+}
+ttl=	16000
+condition NOT met: 	000aaaa	>	aaaa-info:info1-origin
+OriginRow: 	{
+    [info:info1]=aaaa-info:info1-origin
+    [stats:stats1]=aaaa-stats:stats1-origin
+    [stats:stats3]=aaaa-stats:stats3-origin
+    [info:info2]=aaaa-info:info2-origin
+    [zzzz:zzzz1]=aaaa-zzzz:zzzz1-origin
+}
+[ERR]	RequestID=TestReqID RCache backstore:checkAndMutateAndGetRow() failed: innercode=1121
+[ERR]	RequestID=TestReqID LCache backstore:checkAndMutateAndGetRow() failed: innercode=1121
+errcode=	1121
+ok=	false
+origin=	{
+    [info:info1]=aaaa-info:info1-origin
+    [stats:stats1]=aaaa-stats:stats1-origin
+    [stats:stats3]=aaaa-stats:stats3-origin
+    [info:info2]=aaaa-info:info2-origin
+    [zzzz:zzzz1]=aaaa-zzzz:zzzz1-origin
+}
+===============Test checkAndMutateAndGetRow: unknown-failure==============
+[INFO]	RequestID=TestReqID RCache __cache_index_func key=CompareOp member-type=table
+[INFO]	RequestID=TestReqID LCache __cache_index_func key=CompareOp member-type=table
+[INFO]	RequestID=TestReqID LCache Enter checkAndMutateAndGetRow() table_name=user key=EFGH checkFamily=info checkColumn=info1 compareOp=0 checkValue=XXXXXX 
+put={
+    [1]=info
+    [2]=info1
+    [3]=info1-value-value
+    [4]=ver
+    [5]=ver1
+    [6]=ver1-value-value
+    [7]=xxx
+    [8]=xxx1
+    [9]=xxx1-value-value
+} 
+del={
+    [1]=stats:stats2
+} 
+ttl=16000
+[INFO]	RequestID=TestReqID RCache Enter checkAndMutateAndGetRow() table_name=user key=EFGH checkFamily=info checkColumn=info1 compareOp=0 checkValue=XXXXXX 
+put={
+    [1]=info
+    [2]=info1
+    [3]=info1-value-value
+    [4]=ver
+    [5]=ver1
+    [6]=ver1-value-value
+    [7]=xxx
+    [8]=xxx1
+    [9]=xxx1-value-value
+} 
+del={
+    [1]=stats:stats2
+} 
+ttl=16000
+Enter HBase checkAndMutateAndGetRow
+table_name=	user
+key=	EFGH
+checkFamily=	info
+checkColumn=	info1
+compareOp=	0
+checkValue=	XXXXXX
+put=	{
+    [1]=info
+    [2]=info1
+    [3]=info1-value-value
+    [4]=ver
+    [5]=ver1
+    [6]=ver1-value-value
+    [7]=xxx
+    [8]=xxx1
+    [9]=xxx1-value-value
+}
+del=	{
+    [1]=stats:stats2
+}
+ttl=	16000
+HBase checkAndMutateAndGetRow failed
+[ERR]	RequestID=TestReqID RCache backstore:checkAndMutateAndGetRow() failed: innercode=1120
+[ERR]	RequestID=TestReqID LCache backstore:checkAndMutateAndGetRow() failed: innercode=1120
+errcode=	1120
+ok=	false
+origin=	nil

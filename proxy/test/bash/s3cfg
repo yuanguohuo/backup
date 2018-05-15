@@ -1,0 +1,10 @@
+#!/bin/bash
+
+admin_host=127.0.0.1:6080
+root_token=1WYCCJZ9JRLWZU8JTDQJ ## USER_TOKEN
+root_secret=PXhbQDJVeF1PsXw5tsCuIaKY0N8s1BP2J3yCn9K3 ## USER_SECRET
+
+data_host=127.0.0.1:6081
+token=JTLA6O1TF69Z0YB4I7O1
+secret=cwoNbM7TZLxYeMcmQxfiwL7n4Pv0JhPRlNG6m1dq
+uid=dnion

@@ -1,0 +1,3880 @@
+Index: hbase-protocol/src/main/protobuf/Client.proto
+===================================================================
+--- hbase-protocol/src/main/protobuf/Client.proto	(revision 695)
++++ hbase-protocol/src/main/protobuf/Client.proto	(revision 704)
+@@ -451,6 +451,15 @@
+   optional Condition condition = 3;
+ }
+ 
++//Added by Yuanguo.
++//Yuanguo: It's the same as MultiRequest. We don't need to add any fileds, however,
++//         to make it clear, we define a brand new 'Request';
++message MultiAndGetRowRequest {
++  repeated RegionAction regionAction = 1;
++  optional uint64 nonceGroup = 2;
++  optional Condition condition = 3;
++}
++
+ message MultiResponse {
+   repeated RegionActionResult regionActionResult = 1;
+   // used for mutate to indicate processed only
+@@ -459,6 +468,17 @@
+ }
+ 
+ 
++//Added by Yuanguo.
++message MultiAndGetRowResponse {
++  repeated RegionActionResult regionActionResult = 1;
++  // used for mutate to indicate processed only
++  optional bool processed = 2;
++  optional MultiRegionLoadStats regionStatistics = 3;
++  // 'result' is used to return the original row;
++  optional Result result = 4;
++}
++
++
+ service ClientService {
+   rpc Get(GetRequest)
+     returns(GetResponse);
+@@ -480,4 +500,8 @@
+ 
+   rpc Multi(MultiRequest)
+     returns(MultiResponse);
++
++  //Added by Yuanguo. The same as Multi, but return the original row.
++  rpc MultiAndGetRow(MultiAndGetRowRequest)
++    returns(MultiAndGetRowResponse);
+ }
+Index: hbase-protocol/src/main/java/org/apache/hadoop/hbase/protobuf/generated/ClientProtos.java
+===================================================================
+--- hbase-protocol/src/main/java/org/apache/hadoop/hbase/protobuf/generated/ClientProtos.java	(revision 695)
++++ hbase-protocol/src/main/java/org/apache/hadoop/hbase/protobuf/generated/ClientProtos.java	(revision 704)
+@@ -33736,6 +33736,1045 @@
+     // @@protoc_insertion_point(class_scope:hbase.pb.MultiRequest)
+   }
+ 
++  public interface MultiAndGetRowRequestOrBuilder
++      extends com.google.protobuf.MessageOrBuilder {
++
++    // repeated .hbase.pb.RegionAction regionAction = 1;
++    /**
++     * <code>repeated .hbase.pb.RegionAction regionAction = 1;</code>
++     */
++    java.util.List<org.apache.hadoop.hbase.protobuf.generated.ClientProtos.RegionAction> 
++        getRegionActionList();
++    /**
++     * <code>repeated .hbase.pb.RegionAction regionAction = 1;</code>
++     */
++    org.apache.hadoop.hbase.protobuf.generated.ClientProtos.RegionAction getRegionAction(int index);
++    /**
++     * <code>repeated .hbase.pb.RegionAction regionAction = 1;</code>
++     */
++    int getRegionActionCount();
++    /**
++     * <code>repeated .hbase.pb.RegionAction regionAction = 1;</code>
++     */
++    java.util.List<? extends org.apache.hadoop.hbase.protobuf.generated.ClientProtos.RegionActionOrBuilder> 
++        getRegionActionOrBuilderList();
++    /**
++     * <code>repeated .hbase.pb.RegionAction regionAction = 1;</code>
++     */
++    org.apache.hadoop.hbase.protobuf.generated.ClientProtos.RegionActionOrBuilder getRegionActionOrBuilder(
++        int index);
++
++    // optional uint64 nonceGroup = 2;
++    /**
++     * <code>optional uint64 nonceGroup = 2;</code>
++     */
++    boolean hasNonceGroup();
++    /**
++     * <code>optional uint64 nonceGroup = 2;</code>
++     */
++    long getNonceGroup();
++
++    // optional .hbase.pb.Condition condition = 3;
++    /**
++     * <code>optional .hbase.pb.Condition condition = 3;</code>
++     */
++    boolean hasCondition();
++    /**
++     * <code>optional .hbase.pb.Condition condition = 3;</code>
++     */
++    org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Condition getCondition();
++    /**
++     * <code>optional .hbase.pb.Condition condition = 3;</code>
++     */
++    org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ConditionOrBuilder getConditionOrBuilder();
++  }
++  /**
++   * Protobuf type {@code hbase.pb.MultiAndGetRowRequest}
++   *
++   * <pre>
++   *Added by Yuanguo.
++   *Yuanguo: It's the same as MultiRequest. We don't need to add any fileds, however,
++   *         to make it clear, we define a brand new 'Request';
++   * </pre>
++   */
++  public static final class MultiAndGetRowRequest extends
++      com.google.protobuf.GeneratedMessage
++      implements MultiAndGetRowRequestOrBuilder {
++    // Use MultiAndGetRowRequest.newBuilder() to construct.
++    private MultiAndGetRowRequest(com.google.protobuf.GeneratedMessage.Builder<?> builder) {
++      super(builder);
++      this.unknownFields = builder.getUnknownFields();
++    }
++    private MultiAndGetRowRequest(boolean noInit) { this.unknownFields = com.google.protobuf.UnknownFieldSet.getDefaultInstance(); }
++
++    private static final MultiAndGetRowRequest defaultInstance;
++    public static MultiAndGetRowRequest getDefaultInstance() {
++      return defaultInstance;
++    }
++
++    public MultiAndGetRowRequest getDefaultInstanceForType() {
++      return defaultInstance;
++    }
++
++    private final com.google.protobuf.UnknownFieldSet unknownFields;
++    @java.lang.Override
++    public final com.google.protobuf.UnknownFieldSet
++        getUnknownFields() {
++      return this.unknownFields;
++    }
++    private MultiAndGetRowRequest(
++        com.google.protobuf.CodedInputStream input,
++        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
++        throws com.google.protobuf.InvalidProtocolBufferException {
++      initFields();
++      int mutable_bitField0_ = 0;
++      com.google.protobuf.UnknownFieldSet.Builder unknownFields =
++          com.google.protobuf.UnknownFieldSet.newBuilder();
++      try {
++        boolean done = false;
++        while (!done) {
++          int tag = input.readTag();
++          switch (tag) {
++            case 0:
++              done = true;
++              break;
++            default: {
++              if (!parseUnknownField(input, unknownFields,
++                                     extensionRegistry, tag)) {
++                done = true;
++              }
++              break;
++            }
++            case 10: {
++              if (!((mutable_bitField0_ & 0x00000001) == 0x00000001)) {
++                regionAction_ = new java.util.ArrayList<org.apache.hadoop.hbase.protobuf.generated.ClientProtos.RegionAction>();
++                mutable_bitField0_ |= 0x00000001;
++              }
++              regionAction_.add(input.readMessage(org.apache.hadoop.hbase.protobuf.generated.ClientProtos.RegionAction.PARSER, extensionRegistry));
++              break;
++            }
++            case 16: {
++              bitField0_ |= 0x00000001;
++              nonceGroup_ = input.readUInt64();
++              break;
++            }
++            case 26: {
++              org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Condition.Builder subBuilder = null;
++              if (((bitField0_ & 0x00000002) == 0x00000002)) {
++                subBuilder = condition_.toBuilder();
++              }
++              condition_ = input.readMessage(org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Condition.PARSER, extensionRegistry);
++              if (subBuilder != null) {
++                subBuilder.mergeFrom(condition_);
++                condition_ = subBuilder.buildPartial();
++              }
++              bitField0_ |= 0x00000002;
++              break;
++            }
++          }
++        }
++      } catch (com.google.protobuf.InvalidProtocolBufferException e) {
++        throw e.setUnfinishedMessage(this);
++      } catch (java.io.IOException e) {
++        throw new com.google.protobuf.InvalidProtocolBufferException(
++            e.getMessage()).setUnfinishedMessage(this);
++      } finally {
++        if (((mutable_bitField0_ & 0x00000001) == 0x00000001)) {
++          regionAction_ = java.util.Collections.unmodifiableList(regionAction_);
++        }
++        this.unknownFields = unknownFields.build();
++        makeExtensionsImmutable();
++      }
++    }
++    public static final com.google.protobuf.Descriptors.Descriptor
++        getDescriptor() {
++      return org.apache.hadoop.hbase.protobuf.generated.ClientProtos.internal_static_hbase_pb_MultiAndGetRowRequest_descriptor;
++    }
++
++    protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
++        internalGetFieldAccessorTable() {
++      return org.apache.hadoop.hbase.protobuf.generated.ClientProtos.internal_static_hbase_pb_MultiAndGetRowRequest_fieldAccessorTable
++          .ensureFieldAccessorsInitialized(
++              org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MultiAndGetRowRequest.class, org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MultiAndGetRowRequest.Builder.class);
++    }
++
++    public static com.google.protobuf.Parser<MultiAndGetRowRequest> PARSER =
++        new com.google.protobuf.AbstractParser<MultiAndGetRowRequest>() {
++      public MultiAndGetRowRequest parsePartialFrom(
++          com.google.protobuf.CodedInputStream input,
++          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
++          throws com.google.protobuf.InvalidProtocolBufferException {
++        return new MultiAndGetRowRequest(input, extensionRegistry);
++      }
++    };
++
++    @java.lang.Override
++    public com.google.protobuf.Parser<MultiAndGetRowRequest> getParserForType() {
++      return PARSER;
++    }
++
++    private int bitField0_;
++    // repeated .hbase.pb.RegionAction regionAction = 1;
++    public static final int REGIONACTION_FIELD_NUMBER = 1;
++    private java.util.List<org.apache.hadoop.hbase.protobuf.generated.ClientProtos.RegionAction> regionAction_;
++    /**
++     * <code>repeated .hbase.pb.RegionAction regionAction = 1;</code>
++     */
++    public java.util.List<org.apache.hadoop.hbase.protobuf.generated.ClientProtos.RegionAction> getRegionActionList() {
++      return regionAction_;
++    }
++    /**
++     * <code>repeated .hbase.pb.RegionAction regionAction = 1;</code>
++     */
++    public java.util.List<? extends org.apache.hadoop.hbase.protobuf.generated.ClientProtos.RegionActionOrBuilder> 
++        getRegionActionOrBuilderList() {
++      return regionAction_;
++    }
++    /**
++     * <code>repeated .hbase.pb.RegionAction regionAction = 1;</code>
++     */
++    public int getRegionActionCount() {
++      return regionAction_.size();
++    }
++    /**
++     * <code>repeated .hbase.pb.RegionAction regionAction = 1;</code>
++     */
++    public org.apache.hadoop.hbase.protobuf.generated.ClientProtos.RegionAction getRegionAction(int index) {
++      return regionAction_.get(index);
++    }
++    /**
++     * <code>repeated .hbase.pb.RegionAction regionAction = 1;</code>
++     */
++    public org.apache.hadoop.hbase.protobuf.generated.ClientProtos.RegionActionOrBuilder getRegionActionOrBuilder(
++        int index) {
++      return regionAction_.get(index);
++    }
++
++    // optional uint64 nonceGroup = 2;
++    public static final int NONCEGROUP_FIELD_NUMBER = 2;
++    private long nonceGroup_;
++    /**
++     * <code>optional uint64 nonceGroup = 2;</code>
++     */
++    public boolean hasNonceGroup() {
++      return ((bitField0_ & 0x00000001) == 0x00000001);
++    }
++    /**
++     * <code>optional uint64 nonceGroup = 2;</code>
++     */
++    public long getNonceGroup() {
++      return nonceGroup_;
++    }
++
++    // optional .hbase.pb.Condition condition = 3;
++    public static final int CONDITION_FIELD_NUMBER = 3;
++    private org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Condition condition_;
++    /**
++     * <code>optional .hbase.pb.Condition condition = 3;</code>
++     */
++    public boolean hasCondition() {
++      return ((bitField0_ & 0x00000002) == 0x00000002);
++    }
++    /**
++     * <code>optional .hbase.pb.Condition condition = 3;</code>
++     */
++    public org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Condition getCondition() {
++      return condition_;
++    }
++    /**
++     * <code>optional .hbase.pb.Condition condition = 3;</code>
++     */
++    public org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ConditionOrBuilder getConditionOrBuilder() {
++      return condition_;
++    }
++
++    private void initFields() {
++      regionAction_ = java.util.Collections.emptyList();
++      nonceGroup_ = 0L;
++      condition_ = org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Condition.getDefaultInstance();
++    }
++    private byte memoizedIsInitialized = -1;
++    public final boolean isInitialized() {
++      byte isInitialized = memoizedIsInitialized;
++      if (isInitialized != -1) return isInitialized == 1;
++
++      for (int i = 0; i < getRegionActionCount(); i++) {
++        if (!getRegionAction(i).isInitialized()) {
++          memoizedIsInitialized = 0;
++          return false;
++        }
++      }
++      if (hasCondition()) {
++        if (!getCondition().isInitialized()) {
++          memoizedIsInitialized = 0;
++          return false;
++        }
++      }
++      memoizedIsInitialized = 1;
++      return true;
++    }
++
++    public void writeTo(com.google.protobuf.CodedOutputStream output)
++                        throws java.io.IOException {
++      getSerializedSize();
++      for (int i = 0; i < regionAction_.size(); i++) {
++        output.writeMessage(1, regionAction_.get(i));
++      }
++      if (((bitField0_ & 0x00000001) == 0x00000001)) {
++        output.writeUInt64(2, nonceGroup_);
++      }
++      if (((bitField0_ & 0x00000002) == 0x00000002)) {
++        output.writeMessage(3, condition_);
++      }
++      getUnknownFields().writeTo(output);
++    }
++
++    private int memoizedSerializedSize = -1;
++    public int getSerializedSize() {
++      int size = memoizedSerializedSize;
++      if (size != -1) return size;
++
++      size = 0;
++      for (int i = 0; i < regionAction_.size(); i++) {
++        size += com.google.protobuf.CodedOutputStream
++          .computeMessageSize(1, regionAction_.get(i));
++      }
++      if (((bitField0_ & 0x00000001) == 0x00000001)) {
++        size += com.google.protobuf.CodedOutputStream
++          .computeUInt64Size(2, nonceGroup_);
++      }
++      if (((bitField0_ & 0x00000002) == 0x00000002)) {
++        size += com.google.protobuf.CodedOutputStream
++          .computeMessageSize(3, condition_);
++      }
++      size += getUnknownFields().getSerializedSize();
++      memoizedSerializedSize = size;
++      return size;
++    }
++
++    private static final long serialVersionUID = 0L;
++    @java.lang.Override
++    protected java.lang.Object writeReplace()
++        throws java.io.ObjectStreamException {
++      return super.writeReplace();
++    }
++
++    @java.lang.Override
++    public boolean equals(final java.lang.Object obj) {
++      if (obj == this) {
++       return true;
++      }
++      if (!(obj instanceof org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MultiAndGetRowRequest)) {
++        return super.equals(obj);
++      }
++      org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MultiAndGetRowRequest other = (org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MultiAndGetRowRequest) obj;
++
++      boolean result = true;
++      result = result && getRegionActionList()
++          .equals(other.getRegionActionList());
++      result = result && (hasNonceGroup() == other.hasNonceGroup());
++      if (hasNonceGroup()) {
++        result = result && (getNonceGroup()
++            == other.getNonceGroup());
++      }
++      result = result && (hasCondition() == other.hasCondition());
++      if (hasCondition()) {
++        result = result && getCondition()
++            .equals(other.getCondition());
++      }
++      result = result &&
++          getUnknownFields().equals(other.getUnknownFields());
++      return result;
++    }
++
++    private int memoizedHashCode = 0;
++    @java.lang.Override
++    public int hashCode() {
++      if (memoizedHashCode != 0) {
++        return memoizedHashCode;
++      }
++      int hash = 41;
++      hash = (19 * hash) + getDescriptorForType().hashCode();
++      if (getRegionActionCount() > 0) {
++        hash = (37 * hash) + REGIONACTION_FIELD_NUMBER;
++        hash = (53 * hash) + getRegionActionList().hashCode();
++      }
++      if (hasNonceGroup()) {
++        hash = (37 * hash) + NONCEGROUP_FIELD_NUMBER;
++        hash = (53 * hash) + hashLong(getNonceGroup());
++      }
++      if (hasCondition()) {
++        hash = (37 * hash) + CONDITION_FIELD_NUMBER;
++        hash = (53 * hash) + getCondition().hashCode();
++      }
++      hash = (29 * hash) + getUnknownFields().hashCode();
++      memoizedHashCode = hash;
++      return hash;
++    }
++
++    public static org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MultiAndGetRowRequest parseFrom(
++        com.google.protobuf.ByteString data)
++        throws com.google.protobuf.InvalidProtocolBufferException {
++      return PARSER.parseFrom(data);
++    }
++    public static org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MultiAndGetRowRequest parseFrom(
++        com.google.protobuf.ByteString data,
++        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
++        throws com.google.protobuf.InvalidProtocolBufferException {
++      return PARSER.parseFrom(data, extensionRegistry);
++    }
++    public static org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MultiAndGetRowRequest parseFrom(byte[] data)
++        throws com.google.protobuf.InvalidProtocolBufferException {
++      return PARSER.parseFrom(data);
++    }
++    public static org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MultiAndGetRowRequest parseFrom(
++        byte[] data,
++        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
++        throws com.google.protobuf.InvalidProtocolBufferException {
++      return PARSER.parseFrom(data, extensionRegistry);
++    }
++    public static org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MultiAndGetRowRequest parseFrom(java.io.InputStream input)
++        throws java.io.IOException {
++      return PARSER.parseFrom(input);
++    }
++    public static org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MultiAndGetRowRequest parseFrom(
++        java.io.InputStream input,
++        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
++        throws java.io.IOException {
++      return PARSER.parseFrom(input, extensionRegistry);
++    }
++    public static org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MultiAndGetRowRequest parseDelimitedFrom(java.io.InputStream input)
++        throws java.io.IOException {
++      return PARSER.parseDelimitedFrom(input);
++    }
++    public static org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MultiAndGetRowRequest parseDelimitedFrom(
++        java.io.InputStream input,
++        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
++        throws java.io.IOException {
++      return PARSER.parseDelimitedFrom(input, extensionRegistry);
++    }
++    public static org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MultiAndGetRowRequest parseFrom(
++        com.google.protobuf.CodedInputStream input)
++        throws java.io.IOException {
++      return PARSER.parseFrom(input);
++    }
++    public static org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MultiAndGetRowRequest parseFrom(
++        com.google.protobuf.CodedInputStream input,
++        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
++        throws java.io.IOException {
++      return PARSER.parseFrom(input, extensionRegistry);
++    }
++
++    public static Builder newBuilder() { return Builder.create(); }
++    public Builder newBuilderForType() { return newBuilder(); }
++    public static Builder newBuilder(org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MultiAndGetRowRequest prototype) {
++      return newBuilder().mergeFrom(prototype);
++    }
++    public Builder toBuilder() { return newBuilder(this); }
++
++    @java.lang.Override
++    protected Builder newBuilderForType(
++        com.google.protobuf.GeneratedMessage.BuilderParent parent) {
++      Builder builder = new Builder(parent);
++      return builder;
++    }
++    /**
++     * Protobuf type {@code hbase.pb.MultiAndGetRowRequest}
++     *
++     * <pre>
++     *Added by Yuanguo.
++     *Yuanguo: It's the same as MultiRequest. We don't need to add any fileds, however,
++     *         to make it clear, we define a brand new 'Request';
++     * </pre>
++     */
++    public static final class Builder extends
++        com.google.protobuf.GeneratedMessage.Builder<Builder>
++       implements org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MultiAndGetRowRequestOrBuilder {
++      public static final com.google.protobuf.Descriptors.Descriptor
++          getDescriptor() {
++        return org.apache.hadoop.hbase.protobuf.generated.ClientProtos.internal_static_hbase_pb_MultiAndGetRowRequest_descriptor;
++      }
++
++      protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
++          internalGetFieldAccessorTable() {
++        return org.apache.hadoop.hbase.protobuf.generated.ClientProtos.internal_static_hbase_pb_MultiAndGetRowRequest_fieldAccessorTable
++            .ensureFieldAccessorsInitialized(
++                org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MultiAndGetRowRequest.class, org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MultiAndGetRowRequest.Builder.class);
++      }
++
++      // Construct using org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MultiAndGetRowRequest.newBuilder()
++      private Builder() {
++        maybeForceBuilderInitialization();
++      }
++
++      private Builder(
++          com.google.protobuf.GeneratedMessage.BuilderParent parent) {
++        super(parent);
++        maybeForceBuilderInitialization();
++      }
++      private void maybeForceBuilderInitialization() {
++        if (com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders) {
++          getRegionActionFieldBuilder();
++          getConditionFieldBuilder();
++        }
++      }
++      private static Builder create() {
++        return new Builder();
++      }
++
++      public Builder clear() {
++        super.clear();
++        if (regionActionBuilder_ == null) {
++          regionAction_ = java.util.Collections.emptyList();
++          bitField0_ = (bitField0_ & ~0x00000001);
++        } else {
++          regionActionBuilder_.clear();
++        }
++        nonceGroup_ = 0L;
++        bitField0_ = (bitField0_ & ~0x00000002);
++        if (conditionBuilder_ == null) {
++          condition_ = org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Condition.getDefaultInstance();
++        } else {
++          conditionBuilder_.clear();
++        }
++        bitField0_ = (bitField0_ & ~0x00000004);
++        return this;
++      }
++
++      public Builder clone() {
++        return create().mergeFrom(buildPartial());
++      }
++
++      public com.google.protobuf.Descriptors.Descriptor
++          getDescriptorForType() {
++        return org.apache.hadoop.hbase.protobuf.generated.ClientProtos.internal_static_hbase_pb_MultiAndGetRowRequest_descriptor;
++      }
++
++      public org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MultiAndGetRowRequest getDefaultInstanceForType() {
++        return org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MultiAndGetRowRequest.getDefaultInstance();
++      }
++
++      public org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MultiAndGetRowRequest build() {
++        org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MultiAndGetRowRequest result = buildPartial();
++        if (!result.isInitialized()) {
++          throw newUninitializedMessageException(result);
++        }
++        return result;
++      }
++
++      public org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MultiAndGetRowRequest buildPartial() {
++        org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MultiAndGetRowRequest result = new org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MultiAndGetRowRequest(this);
++        int from_bitField0_ = bitField0_;
++        int to_bitField0_ = 0;
++        if (regionActionBuilder_ == null) {
++          if (((bitField0_ & 0x00000001) == 0x00000001)) {
++            regionAction_ = java.util.Collections.unmodifiableList(regionAction_);
++            bitField0_ = (bitField0_ & ~0x00000001);
++          }
++          result.regionAction_ = regionAction_;
++        } else {
++          result.regionAction_ = regionActionBuilder_.build();
++        }
++        if (((from_bitField0_ & 0x00000002) == 0x00000002)) {
++          to_bitField0_ |= 0x00000001;
++        }
++        result.nonceGroup_ = nonceGroup_;
++        if (((from_bitField0_ & 0x00000004) == 0x00000004)) {
++          to_bitField0_ |= 0x00000002;
++        }
++        if (conditionBuilder_ == null) {
++          result.condition_ = condition_;
++        } else {
++          result.condition_ = conditionBuilder_.build();
++        }
++        result.bitField0_ = to_bitField0_;
++        onBuilt();
++        return result;
++      }
++
++      public Builder mergeFrom(com.google.protobuf.Message other) {
++        if (other instanceof org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MultiAndGetRowRequest) {
++          return mergeFrom((org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MultiAndGetRowRequest)other);
++        } else {
++          super.mergeFrom(other);
++          return this;
++        }
++      }
++
++      public Builder mergeFrom(org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MultiAndGetRowRequest other) {
++        if (other == org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MultiAndGetRowRequest.getDefaultInstance()) return this;
++        if (regionActionBuilder_ == null) {
++          if (!other.regionAction_.isEmpty()) {
++            if (regionAction_.isEmpty()) {
++              regionAction_ = other.regionAction_;
++              bitField0_ = (bitField0_ & ~0x00000001);
++            } else {
++              ensureRegionActionIsMutable();
++              regionAction_.addAll(other.regionAction_);
++            }
++            onChanged();
++          }
++        } else {
++          if (!other.regionAction_.isEmpty()) {
++            if (regionActionBuilder_.isEmpty()) {
++              regionActionBuilder_.dispose();
++              regionActionBuilder_ = null;
++              regionAction_ = other.regionAction_;
++              bitField0_ = (bitField0_ & ~0x00000001);
++              regionActionBuilder_ = 
++                com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders ?
++                   getRegionActionFieldBuilder() : null;
++            } else {
++              regionActionBuilder_.addAllMessages(other.regionAction_);
++            }
++          }
++        }
++        if (other.hasNonceGroup()) {
++          setNonceGroup(other.getNonceGroup());
++        }
++        if (other.hasCondition()) {
++          mergeCondition(other.getCondition());
++        }
++        this.mergeUnknownFields(other.getUnknownFields());
++        return this;
++      }
++
++      public final boolean isInitialized() {
++        for (int i = 0; i < getRegionActionCount(); i++) {
++          if (!getRegionAction(i).isInitialized()) {
++            
++            return false;
++          }
++        }
++        if (hasCondition()) {
++          if (!getCondition().isInitialized()) {
++            
++            return false;
++          }
++        }
++        return true;
++      }
++
++      public Builder mergeFrom(
++          com.google.protobuf.CodedInputStream input,
++          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
++          throws java.io.IOException {
++        org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MultiAndGetRowRequest parsedMessage = null;
++        try {
++          parsedMessage = PARSER.parsePartialFrom(input, extensionRegistry);
++        } catch (com.google.protobuf.InvalidProtocolBufferException e) {
++          parsedMessage = (org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MultiAndGetRowRequest) e.getUnfinishedMessage();
++          throw e;
++        } finally {
++          if (parsedMessage != null) {
++            mergeFrom(parsedMessage);
++          }
++        }
++        return this;
++      }
++      private int bitField0_;
++
++      // repeated .hbase.pb.RegionAction regionAction = 1;
++      private java.util.List<org.apache.hadoop.hbase.protobuf.generated.ClientProtos.RegionAction> regionAction_ =
++        java.util.Collections.emptyList();
++      private void ensureRegionActionIsMutable() {
++        if (!((bitField0_ & 0x00000001) == 0x00000001)) {
++          regionAction_ = new java.util.ArrayList<org.apache.hadoop.hbase.protobuf.generated.ClientProtos.RegionAction>(regionAction_);
++          bitField0_ |= 0x00000001;
++         }
++      }
++
++      private com.google.protobuf.RepeatedFieldBuilder<
++          org.apache.hadoop.hbase.protobuf.generated.ClientProtos.RegionAction, org.apache.hadoop.hbase.protobuf.generated.ClientProtos.RegionAction.Builder, org.apache.hadoop.hbase.protobuf.generated.ClientProtos.RegionActionOrBuilder> regionActionBuilder_;
++
++      /**
++       * <code>repeated .hbase.pb.RegionAction regionAction = 1;</code>
++       */
++      public java.util.List<org.apache.hadoop.hbase.protobuf.generated.ClientProtos.RegionAction> getRegionActionList() {
++        if (regionActionBuilder_ == null) {
++          return java.util.Collections.unmodifiableList(regionAction_);
++        } else {
++          return regionActionBuilder_.getMessageList();
++        }
++      }
++      /**
++       * <code>repeated .hbase.pb.RegionAction regionAction = 1;</code>
++       */
++      public int getRegionActionCount() {
++        if (regionActionBuilder_ == null) {
++          return regionAction_.size();
++        } else {
++          return regionActionBuilder_.getCount();
++        }
++      }
++      /**
++       * <code>repeated .hbase.pb.RegionAction regionAction = 1;</code>
++       */
++      public org.apache.hadoop.hbase.protobuf.generated.ClientProtos.RegionAction getRegionAction(int index) {
++        if (regionActionBuilder_ == null) {
++          return regionAction_.get(index);
++        } else {
++          return regionActionBuilder_.getMessage(index);
++        }
++      }
++      /**
++       * <code>repeated .hbase.pb.RegionAction regionAction = 1;</code>
++       */
++      public Builder setRegionAction(
++          int index, org.apache.hadoop.hbase.protobuf.generated.ClientProtos.RegionAction value) {
++        if (regionActionBuilder_ == null) {
++          if (value == null) {
++            throw new NullPointerException();
++          }
++          ensureRegionActionIsMutable();
++          regionAction_.set(index, value);
++          onChanged();
++        } else {
++          regionActionBuilder_.setMessage(index, value);
++        }
++        return this;
++      }
++      /**
++       * <code>repeated .hbase.pb.RegionAction regionAction = 1;</code>
++       */
++      public Builder setRegionAction(
++          int index, org.apache.hadoop.hbase.protobuf.generated.ClientProtos.RegionAction.Builder builderForValue) {
++        if (regionActionBuilder_ == null) {
++          ensureRegionActionIsMutable();
++          regionAction_.set(index, builderForValue.build());
++          onChanged();
++        } else {
++          regionActionBuilder_.setMessage(index, builderForValue.build());
++        }
++        return this;
++      }
++      /**
++       * <code>repeated .hbase.pb.RegionAction regionAction = 1;</code>
++       */
++      public Builder addRegionAction(org.apache.hadoop.hbase.protobuf.generated.ClientProtos.RegionAction value) {
++        if (regionActionBuilder_ == null) {
++          if (value == null) {
++            throw new NullPointerException();
++          }
++          ensureRegionActionIsMutable();
++          regionAction_.add(value);
++          onChanged();
++        } else {
++          regionActionBuilder_.addMessage(value);
++        }
++        return this;
++      }
++      /**
++       * <code>repeated .hbase.pb.RegionAction regionAction = 1;</code>
++       */
++      public Builder addRegionAction(
++          int index, org.apache.hadoop.hbase.protobuf.generated.ClientProtos.RegionAction value) {
++        if (regionActionBuilder_ == null) {
++          if (value == null) {
++            throw new NullPointerException();
++          }
++          ensureRegionActionIsMutable();
++          regionAction_.add(index, value);
++          onChanged();
++        } else {
++          regionActionBuilder_.addMessage(index, value);
++        }
++        return this;
++      }
++      /**
++       * <code>repeated .hbase.pb.RegionAction regionAction = 1;</code>
++       */
++      public Builder addRegionAction(
++          org.apache.hadoop.hbase.protobuf.generated.ClientProtos.RegionAction.Builder builderForValue) {
++        if (regionActionBuilder_ == null) {
++          ensureRegionActionIsMutable();
++          regionAction_.add(builderForValue.build());
++          onChanged();
++        } else {
++          regionActionBuilder_.addMessage(builderForValue.build());
++        }
++        return this;
++      }
++      /**
++       * <code>repeated .hbase.pb.RegionAction regionAction = 1;</code>
++       */
++      public Builder addRegionAction(
++          int index, org.apache.hadoop.hbase.protobuf.generated.ClientProtos.RegionAction.Builder builderForValue) {
++        if (regionActionBuilder_ == null) {
++          ensureRegionActionIsMutable();
++          regionAction_.add(index, builderForValue.build());
++          onChanged();
++        } else {
++          regionActionBuilder_.addMessage(index, builderForValue.build());
++        }
++        return this;
++      }
++      /**
++       * <code>repeated .hbase.pb.RegionAction regionAction = 1;</code>
++       */
++      public Builder addAllRegionAction(
++          java.lang.Iterable<? extends org.apache.hadoop.hbase.protobuf.generated.ClientProtos.RegionAction> values) {
++        if (regionActionBuilder_ == null) {
++          ensureRegionActionIsMutable();
++          super.addAll(values, regionAction_);
++          onChanged();
++        } else {
++          regionActionBuilder_.addAllMessages(values);
++        }
++        return this;
++      }
++      /**
++       * <code>repeated .hbase.pb.RegionAction regionAction = 1;</code>
++       */
++      public Builder clearRegionAction() {
++        if (regionActionBuilder_ == null) {
++          regionAction_ = java.util.Collections.emptyList();
++          bitField0_ = (bitField0_ & ~0x00000001);
++          onChanged();
++        } else {
++          regionActionBuilder_.clear();
++        }
++        return this;
++      }
++      /**
++       * <code>repeated .hbase.pb.RegionAction regionAction = 1;</code>
++       */
++      public Builder removeRegionAction(int index) {
++        if (regionActionBuilder_ == null) {
++          ensureRegionActionIsMutable();
++          regionAction_.remove(index);
++          onChanged();
++        } else {
++          regionActionBuilder_.remove(index);
++        }
++        return this;
++      }
++      /**
++       * <code>repeated .hbase.pb.RegionAction regionAction = 1;</code>
++       */
++      public org.apache.hadoop.hbase.protobuf.generated.ClientProtos.RegionAction.Builder getRegionActionBuilder(
++          int index) {
++        return getRegionActionFieldBuilder().getBuilder(index);
++      }
++      /**
++       * <code>repeated .hbase.pb.RegionAction regionAction = 1;</code>
++       */
++      public org.apache.hadoop.hbase.protobuf.generated.ClientProtos.RegionActionOrBuilder getRegionActionOrBuilder(
++          int index) {
++        if (regionActionBuilder_ == null) {
++          return regionAction_.get(index);  } else {
++          return regionActionBuilder_.getMessageOrBuilder(index);
++        }
++      }
++      /**
++       * <code>repeated .hbase.pb.RegionAction regionAction = 1;</code>
++       */
++      public java.util.List<? extends org.apache.hadoop.hbase.protobuf.generated.ClientProtos.RegionActionOrBuilder> 
++           getRegionActionOrBuilderList() {
++        if (regionActionBuilder_ != null) {
++          return regionActionBuilder_.getMessageOrBuilderList();
++        } else {
++          return java.util.Collections.unmodifiableList(regionAction_);
++        }
++      }
++      /**
++       * <code>repeated .hbase.pb.RegionAction regionAction = 1;</code>
++       */
++      public org.apache.hadoop.hbase.protobuf.generated.ClientProtos.RegionAction.Builder addRegionActionBuilder() {
++        return getRegionActionFieldBuilder().addBuilder(
++            org.apache.hadoop.hbase.protobuf.generated.ClientProtos.RegionAction.getDefaultInstance());
++      }
++      /**
++       * <code>repeated .hbase.pb.RegionAction regionAction = 1;</code>
++       */
++      public org.apache.hadoop.hbase.protobuf.generated.ClientProtos.RegionAction.Builder addRegionActionBuilder(
++          int index) {
++        return getRegionActionFieldBuilder().addBuilder(
++            index, org.apache.hadoop.hbase.protobuf.generated.ClientProtos.RegionAction.getDefaultInstance());
++      }
++      /**
++       * <code>repeated .hbase.pb.RegionAction regionAction = 1;</code>
++       */
++      public java.util.List<org.apache.hadoop.hbase.protobuf.generated.ClientProtos.RegionAction.Builder> 
++           getRegionActionBuilderList() {
++        return getRegionActionFieldBuilder().getBuilderList();
++      }
++      private com.google.protobuf.RepeatedFieldBuilder<
++          org.apache.hadoop.hbase.protobuf.generated.ClientProtos.RegionAction, org.apache.hadoop.hbase.protobuf.generated.ClientProtos.RegionAction.Builder, org.apache.hadoop.hbase.protobuf.generated.ClientProtos.RegionActionOrBuilder> 
++          getRegionActionFieldBuilder() {
++        if (regionActionBuilder_ == null) {
++          regionActionBuilder_ = new com.google.protobuf.RepeatedFieldBuilder<
++              org.apache.hadoop.hbase.protobuf.generated.ClientProtos.RegionAction, org.apache.hadoop.hbase.protobuf.generated.ClientProtos.RegionAction.Builder, org.apache.hadoop.hbase.protobuf.generated.ClientProtos.RegionActionOrBuilder>(
++                  regionAction_,
++                  ((bitField0_ & 0x00000001) == 0x00000001),
++                  getParentForChildren(),
++                  isClean());
++          regionAction_ = null;
++        }
++        return regionActionBuilder_;
++      }
++
++      // optional uint64 nonceGroup = 2;
++      private long nonceGroup_ ;
++      /**
++       * <code>optional uint64 nonceGroup = 2;</code>
++       */
++      public boolean hasNonceGroup() {
++        return ((bitField0_ & 0x00000002) == 0x00000002);
++      }
++      /**
++       * <code>optional uint64 nonceGroup = 2;</code>
++       */
++      public long getNonceGroup() {
++        return nonceGroup_;
++      }
++      /**
++       * <code>optional uint64 nonceGroup = 2;</code>
++       */
++      public Builder setNonceGroup(long value) {
++        bitField0_ |= 0x00000002;
++        nonceGroup_ = value;
++        onChanged();
++        return this;
++      }
++      /**
++       * <code>optional uint64 nonceGroup = 2;</code>
++       */
++      public Builder clearNonceGroup() {
++        bitField0_ = (bitField0_ & ~0x00000002);
++        nonceGroup_ = 0L;
++        onChanged();
++        return this;
++      }
++
++      // optional .hbase.pb.Condition condition = 3;
++      private org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Condition condition_ = org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Condition.getDefaultInstance();
++      private com.google.protobuf.SingleFieldBuilder<
++          org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Condition, org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Condition.Builder, org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ConditionOrBuilder> conditionBuilder_;
++      /**
++       * <code>optional .hbase.pb.Condition condition = 3;</code>
++       */
++      public boolean hasCondition() {
++        return ((bitField0_ & 0x00000004) == 0x00000004);
++      }
++      /**
++       * <code>optional .hbase.pb.Condition condition = 3;</code>
++       */
++      public org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Condition getCondition() {
++        if (conditionBuilder_ == null) {
++          return condition_;
++        } else {
++          return conditionBuilder_.getMessage();
++        }
++      }
++      /**
++       * <code>optional .hbase.pb.Condition condition = 3;</code>
++       */
++      public Builder setCondition(org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Condition value) {
++        if (conditionBuilder_ == null) {
++          if (value == null) {
++            throw new NullPointerException();
++          }
++          condition_ = value;
++          onChanged();
++        } else {
++          conditionBuilder_.setMessage(value);
++        }
++        bitField0_ |= 0x00000004;
++        return this;
++      }
++      /**
++       * <code>optional .hbase.pb.Condition condition = 3;</code>
++       */
++      public Builder setCondition(
++          org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Condition.Builder builderForValue) {
++        if (conditionBuilder_ == null) {
++          condition_ = builderForValue.build();
++          onChanged();
++        } else {
++          conditionBuilder_.setMessage(builderForValue.build());
++        }
++        bitField0_ |= 0x00000004;
++        return this;
++      }
++      /**
++       * <code>optional .hbase.pb.Condition condition = 3;</code>
++       */
++      public Builder mergeCondition(org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Condition value) {
++        if (conditionBuilder_ == null) {
++          if (((bitField0_ & 0x00000004) == 0x00000004) &&
++              condition_ != org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Condition.getDefaultInstance()) {
++            condition_ =
++              org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Condition.newBuilder(condition_).mergeFrom(value).buildPartial();
++          } else {
++            condition_ = value;
++          }
++          onChanged();
++        } else {
++          conditionBuilder_.mergeFrom(value);
++        }
++        bitField0_ |= 0x00000004;
++        return this;
++      }
++      /**
++       * <code>optional .hbase.pb.Condition condition = 3;</code>
++       */
++      public Builder clearCondition() {
++        if (conditionBuilder_ == null) {
++          condition_ = org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Condition.getDefaultInstance();
++          onChanged();
++        } else {
++          conditionBuilder_.clear();
++        }
++        bitField0_ = (bitField0_ & ~0x00000004);
++        return this;
++      }
++      /**
++       * <code>optional .hbase.pb.Condition condition = 3;</code>
++       */
++      public org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Condition.Builder getConditionBuilder() {
++        bitField0_ |= 0x00000004;
++        onChanged();
++        return getConditionFieldBuilder().getBuilder();
++      }
++      /**
++       * <code>optional .hbase.pb.Condition condition = 3;</code>
++       */
++      public org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ConditionOrBuilder getConditionOrBuilder() {
++        if (conditionBuilder_ != null) {
++          return conditionBuilder_.getMessageOrBuilder();
++        } else {
++          return condition_;
++        }
++      }
++      /**
++       * <code>optional .hbase.pb.Condition condition = 3;</code>
++       */
++      private com.google.protobuf.SingleFieldBuilder<
++          org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Condition, org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Condition.Builder, org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ConditionOrBuilder> 
++          getConditionFieldBuilder() {
++        if (conditionBuilder_ == null) {
++          conditionBuilder_ = new com.google.protobuf.SingleFieldBuilder<
++              org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Condition, org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Condition.Builder, org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ConditionOrBuilder>(
++                  condition_,
++                  getParentForChildren(),
++                  isClean());
++          condition_ = null;
++        }
++        return conditionBuilder_;
++      }
++
++      // @@protoc_insertion_point(builder_scope:hbase.pb.MultiAndGetRowRequest)
++    }
++
++    static {
++      defaultInstance = new MultiAndGetRowRequest(true);
++      defaultInstance.initFields();
++    }
++
++    // @@protoc_insertion_point(class_scope:hbase.pb.MultiAndGetRowRequest)
++  }
++
+   public interface MultiResponseOrBuilder
+       extends com.google.protobuf.MessageOrBuilder {
+ 
+@@ -34795,7 +35834,1335 @@
+     // @@protoc_insertion_point(class_scope:hbase.pb.MultiResponse)
+   }
+ 
++  public interface MultiAndGetRowResponseOrBuilder
++      extends com.google.protobuf.MessageOrBuilder {
++
++    // repeated .hbase.pb.RegionActionResult regionActionResult = 1;
++    /**
++     * <code>repeated .hbase.pb.RegionActionResult regionActionResult = 1;</code>
++     */
++    java.util.List<org.apache.hadoop.hbase.protobuf.generated.ClientProtos.RegionActionResult> 
++        getRegionActionResultList();
++    /**
++     * <code>repeated .hbase.pb.RegionActionResult regionActionResult = 1;</code>
++     */
++    org.apache.hadoop.hbase.protobuf.generated.ClientProtos.RegionActionResult getRegionActionResult(int index);
++    /**
++     * <code>repeated .hbase.pb.RegionActionResult regionActionResult = 1;</code>
++     */
++    int getRegionActionResultCount();
++    /**
++     * <code>repeated .hbase.pb.RegionActionResult regionActionResult = 1;</code>
++     */
++    java.util.List<? extends org.apache.hadoop.hbase.protobuf.generated.ClientProtos.RegionActionResultOrBuilder> 
++        getRegionActionResultOrBuilderList();
++    /**
++     * <code>repeated .hbase.pb.RegionActionResult regionActionResult = 1;</code>
++     */
++    org.apache.hadoop.hbase.protobuf.generated.ClientProtos.RegionActionResultOrBuilder getRegionActionResultOrBuilder(
++        int index);
++
++    // optional bool processed = 2;
++    /**
++     * <code>optional bool processed = 2;</code>
++     *
++     * <pre>
++     * used for mutate to indicate processed only
++     * </pre>
++     */
++    boolean hasProcessed();
++    /**
++     * <code>optional bool processed = 2;</code>
++     *
++     * <pre>
++     * used for mutate to indicate processed only
++     * </pre>
++     */
++    boolean getProcessed();
++
++    // optional .hbase.pb.MultiRegionLoadStats regionStatistics = 3;
++    /**
++     * <code>optional .hbase.pb.MultiRegionLoadStats regionStatistics = 3;</code>
++     */
++    boolean hasRegionStatistics();
++    /**
++     * <code>optional .hbase.pb.MultiRegionLoadStats regionStatistics = 3;</code>
++     */
++    org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MultiRegionLoadStats getRegionStatistics();
++    /**
++     * <code>optional .hbase.pb.MultiRegionLoadStats regionStatistics = 3;</code>
++     */
++    org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MultiRegionLoadStatsOrBuilder getRegionStatisticsOrBuilder();
++
++    // optional .hbase.pb.Result result = 4;
++    /**
++     * <code>optional .hbase.pb.Result result = 4;</code>
++     *
++     * <pre>
++     * 'result' is used to return the original row;
++     * </pre>
++     */
++    boolean hasResult();
++    /**
++     * <code>optional .hbase.pb.Result result = 4;</code>
++     *
++     * <pre>
++     * 'result' is used to return the original row;
++     * </pre>
++     */
++    org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Result getResult();
++    /**
++     * <code>optional .hbase.pb.Result result = 4;</code>
++     *
++     * <pre>
++     * 'result' is used to return the original row;
++     * </pre>
++     */
++    org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ResultOrBuilder getResultOrBuilder();
++  }
+   /**
++   * Protobuf type {@code hbase.pb.MultiAndGetRowResponse}
++   *
++   * <pre>
++   *Added by Yuanguo.
++   * </pre>
++   */
++  public static final class MultiAndGetRowResponse extends
++      com.google.protobuf.GeneratedMessage
++      implements MultiAndGetRowResponseOrBuilder {
++    // Use MultiAndGetRowResponse.newBuilder() to construct.
++    private MultiAndGetRowResponse(com.google.protobuf.GeneratedMessage.Builder<?> builder) {
++      super(builder);
++      this.unknownFields = builder.getUnknownFields();
++    }
++    private MultiAndGetRowResponse(boolean noInit) { this.unknownFields = com.google.protobuf.UnknownFieldSet.getDefaultInstance(); }
++
++    private static final MultiAndGetRowResponse defaultInstance;
++    public static MultiAndGetRowResponse getDefaultInstance() {
++      return defaultInstance;
++    }
++
++    public MultiAndGetRowResponse getDefaultInstanceForType() {
++      return defaultInstance;
++    }
++
++    private final com.google.protobuf.UnknownFieldSet unknownFields;
++    @java.lang.Override
++    public final com.google.protobuf.UnknownFieldSet
++        getUnknownFields() {
++      return this.unknownFields;
++    }
++    private MultiAndGetRowResponse(
++        com.google.protobuf.CodedInputStream input,
++        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
++        throws com.google.protobuf.InvalidProtocolBufferException {
++      initFields();
++      int mutable_bitField0_ = 0;
++      com.google.protobuf.UnknownFieldSet.Builder unknownFields =
++          com.google.protobuf.UnknownFieldSet.newBuilder();
++      try {
++        boolean done = false;
++        while (!done) {
++          int tag = input.readTag();
++          switch (tag) {
++            case 0:
++              done = true;
++              break;
++            default: {
++              if (!parseUnknownField(input, unknownFields,
++                                     extensionRegistry, tag)) {
++                done = true;
++              }
++              break;
++            }
++            case 10: {
++              if (!((mutable_bitField0_ & 0x00000001) == 0x00000001)) {
++                regionActionResult_ = new java.util.ArrayList<org.apache.hadoop.hbase.protobuf.generated.ClientProtos.RegionActionResult>();
++                mutable_bitField0_ |= 0x00000001;
++              }
++              regionActionResult_.add(input.readMessage(org.apache.hadoop.hbase.protobuf.generated.ClientProtos.RegionActionResult.PARSER, extensionRegistry));
++              break;
++            }
++            case 16: {
++              bitField0_ |= 0x00000001;
++              processed_ = input.readBool();
++              break;
++            }
++            case 26: {
++              org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MultiRegionLoadStats.Builder subBuilder = null;
++              if (((bitField0_ & 0x00000002) == 0x00000002)) {
++                subBuilder = regionStatistics_.toBuilder();
++              }
++              regionStatistics_ = input.readMessage(org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MultiRegionLoadStats.PARSER, extensionRegistry);
++              if (subBuilder != null) {
++                subBuilder.mergeFrom(regionStatistics_);
++                regionStatistics_ = subBuilder.buildPartial();
++              }
++              bitField0_ |= 0x00000002;
++              break;
++            }
++            case 34: {
++              org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Result.Builder subBuilder = null;
++              if (((bitField0_ & 0x00000004) == 0x00000004)) {
++                subBuilder = result_.toBuilder();
++              }
++              result_ = input.readMessage(org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Result.PARSER, extensionRegistry);
++              if (subBuilder != null) {
++                subBuilder.mergeFrom(result_);
++                result_ = subBuilder.buildPartial();
++              }
++              bitField0_ |= 0x00000004;
++              break;
++            }
++          }
++        }
++      } catch (com.google.protobuf.InvalidProtocolBufferException e) {
++        throw e.setUnfinishedMessage(this);
++      } catch (java.io.IOException e) {
++        throw new com.google.protobuf.InvalidProtocolBufferException(
++            e.getMessage()).setUnfinishedMessage(this);
++      } finally {
++        if (((mutable_bitField0_ & 0x00000001) == 0x00000001)) {
++          regionActionResult_ = java.util.Collections.unmodifiableList(regionActionResult_);
++        }
++        this.unknownFields = unknownFields.build();
++        makeExtensionsImmutable();
++      }
++    }
++    public static final com.google.protobuf.Descriptors.Descriptor
++        getDescriptor() {
++      return org.apache.hadoop.hbase.protobuf.generated.ClientProtos.internal_static_hbase_pb_MultiAndGetRowResponse_descriptor;
++    }
++
++    protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
++        internalGetFieldAccessorTable() {
++      return org.apache.hadoop.hbase.protobuf.generated.ClientProtos.internal_static_hbase_pb_MultiAndGetRowResponse_fieldAccessorTable
++          .ensureFieldAccessorsInitialized(
++              org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MultiAndGetRowResponse.class, org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MultiAndGetRowResponse.Builder.class);
++    }
++
++    public static com.google.protobuf.Parser<MultiAndGetRowResponse> PARSER =
++        new com.google.protobuf.AbstractParser<MultiAndGetRowResponse>() {
++      public MultiAndGetRowResponse parsePartialFrom(
++          com.google.protobuf.CodedInputStream input,
++          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
++          throws com.google.protobuf.InvalidProtocolBufferException {
++        return new MultiAndGetRowResponse(input, extensionRegistry);
++      }
++    };
++
++    @java.lang.Override
++    public com.google.protobuf.Parser<MultiAndGetRowResponse> getParserForType() {
++      return PARSER;
++    }
++
++    private int bitField0_;
++    // repeated .hbase.pb.RegionActionResult regionActionResult = 1;
++    public static final int REGIONACTIONRESULT_FIELD_NUMBER = 1;
++    private java.util.List<org.apache.hadoop.hbase.protobuf.generated.ClientProtos.RegionActionResult> regionActionResult_;
++    /**
++     * <code>repeated .hbase.pb.RegionActionResult regionActionResult = 1;</code>
++     */
++    public java.util.List<org.apache.hadoop.hbase.protobuf.generated.ClientProtos.RegionActionResult> getRegionActionResultList() {
++      return regionActionResult_;
++    }
++    /**
++     * <code>repeated .hbase.pb.RegionActionResult regionActionResult = 1;</code>
++     */
++    public java.util.List<? extends org.apache.hadoop.hbase.protobuf.generated.ClientProtos.RegionActionResultOrBuilder> 
++        getRegionActionResultOrBuilderList() {
++      return regionActionResult_;
++    }
++    /**
++     * <code>repeated .hbase.pb.RegionActionResult regionActionResult = 1;</code>
++     */
++    public int getRegionActionResultCount() {
++      return regionActionResult_.size();
++    }
++    /**
++     * <code>repeated .hbase.pb.RegionActionResult regionActionResult = 1;</code>
++     */
++    public org.apache.hadoop.hbase.protobuf.generated.ClientProtos.RegionActionResult getRegionActionResult(int index) {
++      return regionActionResult_.get(index);
++    }
++    /**
++     * <code>repeated .hbase.pb.RegionActionResult regionActionResult = 1;</code>
++     */
++    public org.apache.hadoop.hbase.protobuf.generated.ClientProtos.RegionActionResultOrBuilder getRegionActionResultOrBuilder(
++        int index) {
++      return regionActionResult_.get(index);
++    }
++
++    // optional bool processed = 2;
++    public static final int PROCESSED_FIELD_NUMBER = 2;
++    private boolean processed_;
++    /**
++     * <code>optional bool processed = 2;</code>
++     *
++     * <pre>
++     * used for mutate to indicate processed only
++     * </pre>
++     */
++    public boolean hasProcessed() {
++      return ((bitField0_ & 0x00000001) == 0x00000001);
++    }
++    /**
++     * <code>optional bool processed = 2;</code>
++     *
++     * <pre>
++     * used for mutate to indicate processed only
++     * </pre>
++     */
++    public boolean getProcessed() {
++      return processed_;
++    }
++
++    // optional .hbase.pb.MultiRegionLoadStats regionStatistics = 3;
++    public static final int REGIONSTATISTICS_FIELD_NUMBER = 3;
++    private org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MultiRegionLoadStats regionStatistics_;
++    /**
++     * <code>optional .hbase.pb.MultiRegionLoadStats regionStatistics = 3;</code>
++     */
++    public boolean hasRegionStatistics() {
++      return ((bitField0_ & 0x00000002) == 0x00000002);
++    }
++    /**
++     * <code>optional .hbase.pb.MultiRegionLoadStats regionStatistics = 3;</code>
++     */
++    public org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MultiRegionLoadStats getRegionStatistics() {
++      return regionStatistics_;
++    }
++    /**
++     * <code>optional .hbase.pb.MultiRegionLoadStats regionStatistics = 3;</code>
++     */
++    public org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MultiRegionLoadStatsOrBuilder getRegionStatisticsOrBuilder() {
++      return regionStatistics_;
++    }
++
++    // optional .hbase.pb.Result result = 4;
++    public static final int RESULT_FIELD_NUMBER = 4;
++    private org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Result result_;
++    /**
++     * <code>optional .hbase.pb.Result result = 4;</code>
++     *
++     * <pre>
++     * 'result' is used to return the original row;
++     * </pre>
++     */
++    public boolean hasResult() {
++      return ((bitField0_ & 0x00000004) == 0x00000004);
++    }
++    /**
++     * <code>optional .hbase.pb.Result result = 4;</code>
++     *
++     * <pre>
++     * 'result' is used to return the original row;
++     * </pre>
++     */
++    public org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Result getResult() {
++      return result_;
++    }
++    /**
++     * <code>optional .hbase.pb.Result result = 4;</code>
++     *
++     * <pre>
++     * 'result' is used to return the original row;
++     * </pre>
++     */
++    public org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ResultOrBuilder getResultOrBuilder() {
++      return result_;
++    }
++
++    private void initFields() {
++      regionActionResult_ = java.util.Collections.emptyList();
++      processed_ = false;
++      regionStatistics_ = org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MultiRegionLoadStats.getDefaultInstance();
++      result_ = org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Result.getDefaultInstance();
++    }
++    private byte memoizedIsInitialized = -1;
++    public final boolean isInitialized() {
++      byte isInitialized = memoizedIsInitialized;
++      if (isInitialized != -1) return isInitialized == 1;
++
++      for (int i = 0; i < getRegionActionResultCount(); i++) {
++        if (!getRegionActionResult(i).isInitialized()) {
++          memoizedIsInitialized = 0;
++          return false;
++        }
++      }
++      if (hasRegionStatistics()) {
++        if (!getRegionStatistics().isInitialized()) {
++          memoizedIsInitialized = 0;
++          return false;
++        }
++      }
++      memoizedIsInitialized = 1;
++      return true;
++    }
++
++    public void writeTo(com.google.protobuf.CodedOutputStream output)
++                        throws java.io.IOException {
++      getSerializedSize();
++      for (int i = 0; i < regionActionResult_.size(); i++) {
++        output.writeMessage(1, regionActionResult_.get(i));
++      }
++      if (((bitField0_ & 0x00000001) == 0x00000001)) {
++        output.writeBool(2, processed_);
++      }
++      if (((bitField0_ & 0x00000002) == 0x00000002)) {
++        output.writeMessage(3, regionStatistics_);
++      }
++      if (((bitField0_ & 0x00000004) == 0x00000004)) {
++        output.writeMessage(4, result_);
++      }
++      getUnknownFields().writeTo(output);
++    }
++
++    private int memoizedSerializedSize = -1;
++    public int getSerializedSize() {
++      int size = memoizedSerializedSize;
++      if (size != -1) return size;
++
++      size = 0;
++      for (int i = 0; i < regionActionResult_.size(); i++) {
++        size += com.google.protobuf.CodedOutputStream
++          .computeMessageSize(1, regionActionResult_.get(i));
++      }
++      if (((bitField0_ & 0x00000001) == 0x00000001)) {
++        size += com.google.protobuf.CodedOutputStream
++          .computeBoolSize(2, processed_);
++      }
++      if (((bitField0_ & 0x00000002) == 0x00000002)) {
++        size += com.google.protobuf.CodedOutputStream
++          .computeMessageSize(3, regionStatistics_);
++      }
++      if (((bitField0_ & 0x00000004) == 0x00000004)) {
++        size += com.google.protobuf.CodedOutputStream
++          .computeMessageSize(4, result_);
++      }
++      size += getUnknownFields().getSerializedSize();
++      memoizedSerializedSize = size;
++      return size;
++    }
++
++    private static final long serialVersionUID = 0L;
++    @java.lang.Override
++    protected java.lang.Object writeReplace()
++        throws java.io.ObjectStreamException {
++      return super.writeReplace();
++    }
++
++    @java.lang.Override
++    public boolean equals(final java.lang.Object obj) {
++      if (obj == this) {
++       return true;
++      }
++      if (!(obj instanceof org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MultiAndGetRowResponse)) {
++        return super.equals(obj);
++      }
++      org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MultiAndGetRowResponse other = (org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MultiAndGetRowResponse) obj;
++
++      boolean result = true;
++      result = result && getRegionActionResultList()
++          .equals(other.getRegionActionResultList());
++      result = result && (hasProcessed() == other.hasProcessed());
++      if (hasProcessed()) {
++        result = result && (getProcessed()
++            == other.getProcessed());
++      }
++      result = result && (hasRegionStatistics() == other.hasRegionStatistics());
++      if (hasRegionStatistics()) {
++        result = result && getRegionStatistics()
++            .equals(other.getRegionStatistics());
++      }
++      result = result && (hasResult() == other.hasResult());
++      if (hasResult()) {
++        result = result && getResult()
++            .equals(other.getResult());
++      }
++      result = result &&
++          getUnknownFields().equals(other.getUnknownFields());
++      return result;
++    }
++
++    private int memoizedHashCode = 0;
++    @java.lang.Override
++    public int hashCode() {
++      if (memoizedHashCode != 0) {
++        return memoizedHashCode;
++      }
++      int hash = 41;
++      hash = (19 * hash) + getDescriptorForType().hashCode();
++      if (getRegionActionResultCount() > 0) {
++        hash = (37 * hash) + REGIONACTIONRESULT_FIELD_NUMBER;
++        hash = (53 * hash) + getRegionActionResultList().hashCode();
++      }
++      if (hasProcessed()) {
++        hash = (37 * hash) + PROCESSED_FIELD_NUMBER;
++        hash = (53 * hash) + hashBoolean(getProcessed());
++      }
++      if (hasRegionStatistics()) {
++        hash = (37 * hash) + REGIONSTATISTICS_FIELD_NUMBER;
++        hash = (53 * hash) + getRegionStatistics().hashCode();
++      }
++      if (hasResult()) {
++        hash = (37 * hash) + RESULT_FIELD_NUMBER;
++        hash = (53 * hash) + getResult().hashCode();
++      }
++      hash = (29 * hash) + getUnknownFields().hashCode();
++      memoizedHashCode = hash;
++      return hash;
++    }
++
++    public static org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MultiAndGetRowResponse parseFrom(
++        com.google.protobuf.ByteString data)
++        throws com.google.protobuf.InvalidProtocolBufferException {
++      return PARSER.parseFrom(data);
++    }
++    public static org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MultiAndGetRowResponse parseFrom(
++        com.google.protobuf.ByteString data,
++        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
++        throws com.google.protobuf.InvalidProtocolBufferException {
++      return PARSER.parseFrom(data, extensionRegistry);
++    }
++    public static org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MultiAndGetRowResponse parseFrom(byte[] data)
++        throws com.google.protobuf.InvalidProtocolBufferException {
++      return PARSER.parseFrom(data);
++    }
++    public static org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MultiAndGetRowResponse parseFrom(
++        byte[] data,
++        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
++        throws com.google.protobuf.InvalidProtocolBufferException {
++      return PARSER.parseFrom(data, extensionRegistry);
++    }
++    public static org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MultiAndGetRowResponse parseFrom(java.io.InputStream input)
++        throws java.io.IOException {
++      return PARSER.parseFrom(input);
++    }
++    public static org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MultiAndGetRowResponse parseFrom(
++        java.io.InputStream input,
++        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
++        throws java.io.IOException {
++      return PARSER.parseFrom(input, extensionRegistry);
++    }
++    public static org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MultiAndGetRowResponse parseDelimitedFrom(java.io.InputStream input)
++        throws java.io.IOException {
++      return PARSER.parseDelimitedFrom(input);
++    }
++    public static org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MultiAndGetRowResponse parseDelimitedFrom(
++        java.io.InputStream input,
++        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
++        throws java.io.IOException {
++      return PARSER.parseDelimitedFrom(input, extensionRegistry);
++    }
++    public static org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MultiAndGetRowResponse parseFrom(
++        com.google.protobuf.CodedInputStream input)
++        throws java.io.IOException {
++      return PARSER.parseFrom(input);
++    }
++    public static org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MultiAndGetRowResponse parseFrom(
++        com.google.protobuf.CodedInputStream input,
++        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
++        throws java.io.IOException {
++      return PARSER.parseFrom(input, extensionRegistry);
++    }
++
++    public static Builder newBuilder() { return Builder.create(); }
++    public Builder newBuilderForType() { return newBuilder(); }
++    public static Builder newBuilder(org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MultiAndGetRowResponse prototype) {
++      return newBuilder().mergeFrom(prototype);
++    }
++    public Builder toBuilder() { return newBuilder(this); }
++
++    @java.lang.Override
++    protected Builder newBuilderForType(
++        com.google.protobuf.GeneratedMessage.BuilderParent parent) {
++      Builder builder = new Builder(parent);
++      return builder;
++    }
++    /**
++     * Protobuf type {@code hbase.pb.MultiAndGetRowResponse}
++     *
++     * <pre>
++     *Added by Yuanguo.
++     * </pre>
++     */
++    public static final class Builder extends
++        com.google.protobuf.GeneratedMessage.Builder<Builder>
++       implements org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MultiAndGetRowResponseOrBuilder {
++      public static final com.google.protobuf.Descriptors.Descriptor
++          getDescriptor() {
++        return org.apache.hadoop.hbase.protobuf.generated.ClientProtos.internal_static_hbase_pb_MultiAndGetRowResponse_descriptor;
++      }
++
++      protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
++          internalGetFieldAccessorTable() {
++        return org.apache.hadoop.hbase.protobuf.generated.ClientProtos.internal_static_hbase_pb_MultiAndGetRowResponse_fieldAccessorTable
++            .ensureFieldAccessorsInitialized(
++                org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MultiAndGetRowResponse.class, org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MultiAndGetRowResponse.Builder.class);
++      }
++
++      // Construct using org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MultiAndGetRowResponse.newBuilder()
++      private Builder() {
++        maybeForceBuilderInitialization();
++      }
++
++      private Builder(
++          com.google.protobuf.GeneratedMessage.BuilderParent parent) {
++        super(parent);
++        maybeForceBuilderInitialization();
++      }
++      private void maybeForceBuilderInitialization() {
++        if (com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders) {
++          getRegionActionResultFieldBuilder();
++          getRegionStatisticsFieldBuilder();
++          getResultFieldBuilder();
++        }
++      }
++      private static Builder create() {
++        return new Builder();
++      }
++
++      public Builder clear() {
++        super.clear();
++        if (regionActionResultBuilder_ == null) {
++          regionActionResult_ = java.util.Collections.emptyList();
++          bitField0_ = (bitField0_ & ~0x00000001);
++        } else {
++          regionActionResultBuilder_.clear();
++        }
++        processed_ = false;
++        bitField0_ = (bitField0_ & ~0x00000002);
++        if (regionStatisticsBuilder_ == null) {
++          regionStatistics_ = org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MultiRegionLoadStats.getDefaultInstance();
++        } else {
++          regionStatisticsBuilder_.clear();
++        }
++        bitField0_ = (bitField0_ & ~0x00000004);
++        if (resultBuilder_ == null) {
++          result_ = org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Result.getDefaultInstance();
++        } else {
++          resultBuilder_.clear();
++        }
++        bitField0_ = (bitField0_ & ~0x00000008);
++        return this;
++      }
++
++      public Builder clone() {
++        return create().mergeFrom(buildPartial());
++      }
++
++      public com.google.protobuf.Descriptors.Descriptor
++          getDescriptorForType() {
++        return org.apache.hadoop.hbase.protobuf.generated.ClientProtos.internal_static_hbase_pb_MultiAndGetRowResponse_descriptor;
++      }
++
++      public org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MultiAndGetRowResponse getDefaultInstanceForType() {
++        return org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MultiAndGetRowResponse.getDefaultInstance();
++      }
++
++      public org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MultiAndGetRowResponse build() {
++        org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MultiAndGetRowResponse result = buildPartial();
++        if (!result.isInitialized()) {
++          throw newUninitializedMessageException(result);
++        }
++        return result;
++      }
++
++      public org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MultiAndGetRowResponse buildPartial() {
++        org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MultiAndGetRowResponse result = new org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MultiAndGetRowResponse(this);
++        int from_bitField0_ = bitField0_;
++        int to_bitField0_ = 0;
++        if (regionActionResultBuilder_ == null) {
++          if (((bitField0_ & 0x00000001) == 0x00000001)) {
++            regionActionResult_ = java.util.Collections.unmodifiableList(regionActionResult_);
++            bitField0_ = (bitField0_ & ~0x00000001);
++          }
++          result.regionActionResult_ = regionActionResult_;
++        } else {
++          result.regionActionResult_ = regionActionResultBuilder_.build();
++        }
++        if (((from_bitField0_ & 0x00000002) == 0x00000002)) {
++          to_bitField0_ |= 0x00000001;
++        }
++        result.processed_ = processed_;
++        if (((from_bitField0_ & 0x00000004) == 0x00000004)) {
++          to_bitField0_ |= 0x00000002;
++        }
++        if (regionStatisticsBuilder_ == null) {
++          result.regionStatistics_ = regionStatistics_;
++        } else {
++          result.regionStatistics_ = regionStatisticsBuilder_.build();
++        }
++        if (((from_bitField0_ & 0x00000008) == 0x00000008)) {
++          to_bitField0_ |= 0x00000004;
++        }
++        if (resultBuilder_ == null) {
++          result.result_ = result_;
++        } else {
++          result.result_ = resultBuilder_.build();
++        }
++        result.bitField0_ = to_bitField0_;
++        onBuilt();
++        return result;
++      }
++
++      public Builder mergeFrom(com.google.protobuf.Message other) {
++        if (other instanceof org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MultiAndGetRowResponse) {
++          return mergeFrom((org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MultiAndGetRowResponse)other);
++        } else {
++          super.mergeFrom(other);
++          return this;
++        }
++      }
++
++      public Builder mergeFrom(org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MultiAndGetRowResponse other) {
++        if (other == org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MultiAndGetRowResponse.getDefaultInstance()) return this;
++        if (regionActionResultBuilder_ == null) {
++          if (!other.regionActionResult_.isEmpty()) {
++            if (regionActionResult_.isEmpty()) {
++              regionActionResult_ = other.regionActionResult_;
++              bitField0_ = (bitField0_ & ~0x00000001);
++            } else {
++              ensureRegionActionResultIsMutable();
++              regionActionResult_.addAll(other.regionActionResult_);
++            }
++            onChanged();
++          }
++        } else {
++          if (!other.regionActionResult_.isEmpty()) {
++            if (regionActionResultBuilder_.isEmpty()) {
++              regionActionResultBuilder_.dispose();
++              regionActionResultBuilder_ = null;
++              regionActionResult_ = other.regionActionResult_;
++              bitField0_ = (bitField0_ & ~0x00000001);
++              regionActionResultBuilder_ = 
++                com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders ?
++                   getRegionActionResultFieldBuilder() : null;
++            } else {
++              regionActionResultBuilder_.addAllMessages(other.regionActionResult_);
++            }
++          }
++        }
++        if (other.hasProcessed()) {
++          setProcessed(other.getProcessed());
++        }
++        if (other.hasRegionStatistics()) {
++          mergeRegionStatistics(other.getRegionStatistics());
++        }
++        if (other.hasResult()) {
++          mergeResult(other.getResult());
++        }
++        this.mergeUnknownFields(other.getUnknownFields());
++        return this;
++      }
++
++      public final boolean isInitialized() {
++        for (int i = 0; i < getRegionActionResultCount(); i++) {
++          if (!getRegionActionResult(i).isInitialized()) {
++            
++            return false;
++          }
++        }
++        if (hasRegionStatistics()) {
++          if (!getRegionStatistics().isInitialized()) {
++            
++            return false;
++          }
++        }
++        return true;
++      }
++
++      public Builder mergeFrom(
++          com.google.protobuf.CodedInputStream input,
++          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
++          throws java.io.IOException {
++        org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MultiAndGetRowResponse parsedMessage = null;
++        try {
++          parsedMessage = PARSER.parsePartialFrom(input, extensionRegistry);
++        } catch (com.google.protobuf.InvalidProtocolBufferException e) {
++          parsedMessage = (org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MultiAndGetRowResponse) e.getUnfinishedMessage();
++          throw e;
++        } finally {
++          if (parsedMessage != null) {
++            mergeFrom(parsedMessage);
++          }
++        }
++        return this;
++      }
++      private int bitField0_;
++
++      // repeated .hbase.pb.RegionActionResult regionActionResult = 1;
++      private java.util.List<org.apache.hadoop.hbase.protobuf.generated.ClientProtos.RegionActionResult> regionActionResult_ =
++        java.util.Collections.emptyList();
++      private void ensureRegionActionResultIsMutable() {
++        if (!((bitField0_ & 0x00000001) == 0x00000001)) {
++          regionActionResult_ = new java.util.ArrayList<org.apache.hadoop.hbase.protobuf.generated.ClientProtos.RegionActionResult>(regionActionResult_);
++          bitField0_ |= 0x00000001;
++         }
++      }
++
++      private com.google.protobuf.RepeatedFieldBuilder<
++          org.apache.hadoop.hbase.protobuf.generated.ClientProtos.RegionActionResult, org.apache.hadoop.hbase.protobuf.generated.ClientProtos.RegionActionResult.Builder, org.apache.hadoop.hbase.protobuf.generated.ClientProtos.RegionActionResultOrBuilder> regionActionResultBuilder_;
++
++      /**
++       * <code>repeated .hbase.pb.RegionActionResult regionActionResult = 1;</code>
++       */
++      public java.util.List<org.apache.hadoop.hbase.protobuf.generated.ClientProtos.RegionActionResult> getRegionActionResultList() {
++        if (regionActionResultBuilder_ == null) {
++          return java.util.Collections.unmodifiableList(regionActionResult_);
++        } else {
++          return regionActionResultBuilder_.getMessageList();
++        }
++      }
++      /**
++       * <code>repeated .hbase.pb.RegionActionResult regionActionResult = 1;</code>
++       */
++      public int getRegionActionResultCount() {
++        if (regionActionResultBuilder_ == null) {
++          return regionActionResult_.size();
++        } else {
++          return regionActionResultBuilder_.getCount();
++        }
++      }
++      /**
++       * <code>repeated .hbase.pb.RegionActionResult regionActionResult = 1;</code>
++       */
++      public org.apache.hadoop.hbase.protobuf.generated.ClientProtos.RegionActionResult getRegionActionResult(int index) {
++        if (regionActionResultBuilder_ == null) {
++          return regionActionResult_.get(index);
++        } else {
++          return regionActionResultBuilder_.getMessage(index);
++        }
++      }
++      /**
++       * <code>repeated .hbase.pb.RegionActionResult regionActionResult = 1;</code>
++       */
++      public Builder setRegionActionResult(
++          int index, org.apache.hadoop.hbase.protobuf.generated.ClientProtos.RegionActionResult value) {
++        if (regionActionResultBuilder_ == null) {
++          if (value == null) {
++            throw new NullPointerException();
++          }
++          ensureRegionActionResultIsMutable();
++          regionActionResult_.set(index, value);
++          onChanged();
++        } else {
++          regionActionResultBuilder_.setMessage(index, value);
++        }
++        return this;
++      }
++      /**
++       * <code>repeated .hbase.pb.RegionActionResult regionActionResult = 1;</code>
++       */
++      public Builder setRegionActionResult(
++          int index, org.apache.hadoop.hbase.protobuf.generated.ClientProtos.RegionActionResult.Builder builderForValue) {
++        if (regionActionResultBuilder_ == null) {
++          ensureRegionActionResultIsMutable();
++          regionActionResult_.set(index, builderForValue.build());
++          onChanged();
++        } else {
++          regionActionResultBuilder_.setMessage(index, builderForValue.build());
++        }
++        return this;
++      }
++      /**
++       * <code>repeated .hbase.pb.RegionActionResult regionActionResult = 1;</code>
++       */
++      public Builder addRegionActionResult(org.apache.hadoop.hbase.protobuf.generated.ClientProtos.RegionActionResult value) {
++        if (regionActionResultBuilder_ == null) {
++          if (value == null) {
++            throw new NullPointerException();
++          }
++          ensureRegionActionResultIsMutable();
++          regionActionResult_.add(value);
++          onChanged();
++        } else {
++          regionActionResultBuilder_.addMessage(value);
++        }
++        return this;
++      }
++      /**
++       * <code>repeated .hbase.pb.RegionActionResult regionActionResult = 1;</code>
++       */
++      public Builder addRegionActionResult(
++          int index, org.apache.hadoop.hbase.protobuf.generated.ClientProtos.RegionActionResult value) {
++        if (regionActionResultBuilder_ == null) {
++          if (value == null) {
++            throw new NullPointerException();
++          }
++          ensureRegionActionResultIsMutable();
++          regionActionResult_.add(index, value);
++          onChanged();
++        } else {
++          regionActionResultBuilder_.addMessage(index, value);
++        }
++        return this;
++      }
++      /**
++       * <code>repeated .hbase.pb.RegionActionResult regionActionResult = 1;</code>
++       */
++      public Builder addRegionActionResult(
++          org.apache.hadoop.hbase.protobuf.generated.ClientProtos.RegionActionResult.Builder builderForValue) {
++        if (regionActionResultBuilder_ == null) {
++          ensureRegionActionResultIsMutable();
++          regionActionResult_.add(builderForValue.build());
++          onChanged();
++        } else {
++          regionActionResultBuilder_.addMessage(builderForValue.build());
++        }
++        return this;
++      }
++      /**
++       * <code>repeated .hbase.pb.RegionActionResult regionActionResult = 1;</code>
++       */
++      public Builder addRegionActionResult(
++          int index, org.apache.hadoop.hbase.protobuf.generated.ClientProtos.RegionActionResult.Builder builderForValue) {
++        if (regionActionResultBuilder_ == null) {
++          ensureRegionActionResultIsMutable();
++          regionActionResult_.add(index, builderForValue.build());
++          onChanged();
++        } else {
++          regionActionResultBuilder_.addMessage(index, builderForValue.build());
++        }
++        return this;
++      }
++      /**
++       * <code>repeated .hbase.pb.RegionActionResult regionActionResult = 1;</code>
++       */
++      public Builder addAllRegionActionResult(
++          java.lang.Iterable<? extends org.apache.hadoop.hbase.protobuf.generated.ClientProtos.RegionActionResult> values) {
++        if (regionActionResultBuilder_ == null) {
++          ensureRegionActionResultIsMutable();
++          super.addAll(values, regionActionResult_);
++          onChanged();
++        } else {
++          regionActionResultBuilder_.addAllMessages(values);
++        }
++        return this;
++      }
++      /**
++       * <code>repeated .hbase.pb.RegionActionResult regionActionResult = 1;</code>
++       */
++      public Builder clearRegionActionResult() {
++        if (regionActionResultBuilder_ == null) {
++          regionActionResult_ = java.util.Collections.emptyList();
++          bitField0_ = (bitField0_ & ~0x00000001);
++          onChanged();
++        } else {
++          regionActionResultBuilder_.clear();
++        }
++        return this;
++      }
++      /**
++       * <code>repeated .hbase.pb.RegionActionResult regionActionResult = 1;</code>
++       */
++      public Builder removeRegionActionResult(int index) {
++        if (regionActionResultBuilder_ == null) {
++          ensureRegionActionResultIsMutable();
++          regionActionResult_.remove(index);
++          onChanged();
++        } else {
++          regionActionResultBuilder_.remove(index);
++        }
++        return this;
++      }
++      /**
++       * <code>repeated .hbase.pb.RegionActionResult regionActionResult = 1;</code>
++       */
++      public org.apache.hadoop.hbase.protobuf.generated.ClientProtos.RegionActionResult.Builder getRegionActionResultBuilder(
++          int index) {
++        return getRegionActionResultFieldBuilder().getBuilder(index);
++      }
++      /**
++       * <code>repeated .hbase.pb.RegionActionResult regionActionResult = 1;</code>
++       */
++      public org.apache.hadoop.hbase.protobuf.generated.ClientProtos.RegionActionResultOrBuilder getRegionActionResultOrBuilder(
++          int index) {
++        if (regionActionResultBuilder_ == null) {
++          return regionActionResult_.get(index);  } else {
++          return regionActionResultBuilder_.getMessageOrBuilder(index);
++        }
++      }
++      /**
++       * <code>repeated .hbase.pb.RegionActionResult regionActionResult = 1;</code>
++       */
++      public java.util.List<? extends org.apache.hadoop.hbase.protobuf.generated.ClientProtos.RegionActionResultOrBuilder> 
++           getRegionActionResultOrBuilderList() {
++        if (regionActionResultBuilder_ != null) {
++          return regionActionResultBuilder_.getMessageOrBuilderList();
++        } else {
++          return java.util.Collections.unmodifiableList(regionActionResult_);
++        }
++      }
++      /**
++       * <code>repeated .hbase.pb.RegionActionResult regionActionResult = 1;</code>
++       */
++      public org.apache.hadoop.hbase.protobuf.generated.ClientProtos.RegionActionResult.Builder addRegionActionResultBuilder() {
++        return getRegionActionResultFieldBuilder().addBuilder(
++            org.apache.hadoop.hbase.protobuf.generated.ClientProtos.RegionActionResult.getDefaultInstance());
++      }
++      /**
++       * <code>repeated .hbase.pb.RegionActionResult regionActionResult = 1;</code>
++       */
++      public org.apache.hadoop.hbase.protobuf.generated.ClientProtos.RegionActionResult.Builder addRegionActionResultBuilder(
++          int index) {
++        return getRegionActionResultFieldBuilder().addBuilder(
++            index, org.apache.hadoop.hbase.protobuf.generated.ClientProtos.RegionActionResult.getDefaultInstance());
++      }
++      /**
++       * <code>repeated .hbase.pb.RegionActionResult regionActionResult = 1;</code>
++       */
++      public java.util.List<org.apache.hadoop.hbase.protobuf.generated.ClientProtos.RegionActionResult.Builder> 
++           getRegionActionResultBuilderList() {
++        return getRegionActionResultFieldBuilder().getBuilderList();
++      }
++      private com.google.protobuf.RepeatedFieldBuilder<
++          org.apache.hadoop.hbase.protobuf.generated.ClientProtos.RegionActionResult, org.apache.hadoop.hbase.protobuf.generated.ClientProtos.RegionActionResult.Builder, org.apache.hadoop.hbase.protobuf.generated.ClientProtos.RegionActionResultOrBuilder> 
++          getRegionActionResultFieldBuilder() {
++        if (regionActionResultBuilder_ == null) {
++          regionActionResultBuilder_ = new com.google.protobuf.RepeatedFieldBuilder<
++              org.apache.hadoop.hbase.protobuf.generated.ClientProtos.RegionActionResult, org.apache.hadoop.hbase.protobuf.generated.ClientProtos.RegionActionResult.Builder, org.apache.hadoop.hbase.protobuf.generated.ClientProtos.RegionActionResultOrBuilder>(
++                  regionActionResult_,
++                  ((bitField0_ & 0x00000001) == 0x00000001),
++                  getParentForChildren(),
++                  isClean());
++          regionActionResult_ = null;
++        }
++        return regionActionResultBuilder_;
++      }
++
++      // optional bool processed = 2;
++      private boolean processed_ ;
++      /**
++       * <code>optional bool processed = 2;</code>
++       *
++       * <pre>
++       * used for mutate to indicate processed only
++       * </pre>
++       */
++      public boolean hasProcessed() {
++        return ((bitField0_ & 0x00000002) == 0x00000002);
++      }
++      /**
++       * <code>optional bool processed = 2;</code>
++       *
++       * <pre>
++       * used for mutate to indicate processed only
++       * </pre>
++       */
++      public boolean getProcessed() {
++        return processed_;
++      }
++      /**
++       * <code>optional bool processed = 2;</code>
++       *
++       * <pre>
++       * used for mutate to indicate processed only
++       * </pre>
++       */
++      public Builder setProcessed(boolean value) {
++        bitField0_ |= 0x00000002;
++        processed_ = value;
++        onChanged();
++        return this;
++      }
++      /**
++       * <code>optional bool processed = 2;</code>
++       *
++       * <pre>
++       * used for mutate to indicate processed only
++       * </pre>
++       */
++      public Builder clearProcessed() {
++        bitField0_ = (bitField0_ & ~0x00000002);
++        processed_ = false;
++        onChanged();
++        return this;
++      }
++
++      // optional .hbase.pb.MultiRegionLoadStats regionStatistics = 3;
++      private org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MultiRegionLoadStats regionStatistics_ = org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MultiRegionLoadStats.getDefaultInstance();
++      private com.google.protobuf.SingleFieldBuilder<
++          org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MultiRegionLoadStats, org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MultiRegionLoadStats.Builder, org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MultiRegionLoadStatsOrBuilder> regionStatisticsBuilder_;
++      /**
++       * <code>optional .hbase.pb.MultiRegionLoadStats regionStatistics = 3;</code>
++       */
++      public boolean hasRegionStatistics() {
++        return ((bitField0_ & 0x00000004) == 0x00000004);
++      }
++      /**
++       * <code>optional .hbase.pb.MultiRegionLoadStats regionStatistics = 3;</code>
++       */
++      public org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MultiRegionLoadStats getRegionStatistics() {
++        if (regionStatisticsBuilder_ == null) {
++          return regionStatistics_;
++        } else {
++          return regionStatisticsBuilder_.getMessage();
++        }
++      }
++      /**
++       * <code>optional .hbase.pb.MultiRegionLoadStats regionStatistics = 3;</code>
++       */
++      public Builder setRegionStatistics(org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MultiRegionLoadStats value) {
++        if (regionStatisticsBuilder_ == null) {
++          if (value == null) {
++            throw new NullPointerException();
++          }
++          regionStatistics_ = value;
++          onChanged();
++        } else {
++          regionStatisticsBuilder_.setMessage(value);
++        }
++        bitField0_ |= 0x00000004;
++        return this;
++      }
++      /**
++       * <code>optional .hbase.pb.MultiRegionLoadStats regionStatistics = 3;</code>
++       */
++      public Builder setRegionStatistics(
++          org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MultiRegionLoadStats.Builder builderForValue) {
++        if (regionStatisticsBuilder_ == null) {
++          regionStatistics_ = builderForValue.build();
++          onChanged();
++        } else {
++          regionStatisticsBuilder_.setMessage(builderForValue.build());
++        }
++        bitField0_ |= 0x00000004;
++        return this;
++      }
++      /**
++       * <code>optional .hbase.pb.MultiRegionLoadStats regionStatistics = 3;</code>
++       */
++      public Builder mergeRegionStatistics(org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MultiRegionLoadStats value) {
++        if (regionStatisticsBuilder_ == null) {
++          if (((bitField0_ & 0x00000004) == 0x00000004) &&
++              regionStatistics_ != org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MultiRegionLoadStats.getDefaultInstance()) {
++            regionStatistics_ =
++              org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MultiRegionLoadStats.newBuilder(regionStatistics_).mergeFrom(value).buildPartial();
++          } else {
++            regionStatistics_ = value;
++          }
++          onChanged();
++        } else {
++          regionStatisticsBuilder_.mergeFrom(value);
++        }
++        bitField0_ |= 0x00000004;
++        return this;
++      }
++      /**
++       * <code>optional .hbase.pb.MultiRegionLoadStats regionStatistics = 3;</code>
++       */
++      public Builder clearRegionStatistics() {
++        if (regionStatisticsBuilder_ == null) {
++          regionStatistics_ = org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MultiRegionLoadStats.getDefaultInstance();
++          onChanged();
++        } else {
++          regionStatisticsBuilder_.clear();
++        }
++        bitField0_ = (bitField0_ & ~0x00000004);
++        return this;
++      }
++      /**
++       * <code>optional .hbase.pb.MultiRegionLoadStats regionStatistics = 3;</code>
++       */
++      public org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MultiRegionLoadStats.Builder getRegionStatisticsBuilder() {
++        bitField0_ |= 0x00000004;
++        onChanged();
++        return getRegionStatisticsFieldBuilder().getBuilder();
++      }
++      /**
++       * <code>optional .hbase.pb.MultiRegionLoadStats regionStatistics = 3;</code>
++       */
++      public org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MultiRegionLoadStatsOrBuilder getRegionStatisticsOrBuilder() {
++        if (regionStatisticsBuilder_ != null) {
++          return regionStatisticsBuilder_.getMessageOrBuilder();
++        } else {
++          return regionStatistics_;
++        }
++      }
++      /**
++       * <code>optional .hbase.pb.MultiRegionLoadStats regionStatistics = 3;</code>
++       */
++      private com.google.protobuf.SingleFieldBuilder<
++          org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MultiRegionLoadStats, org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MultiRegionLoadStats.Builder, org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MultiRegionLoadStatsOrBuilder> 
++          getRegionStatisticsFieldBuilder() {
++        if (regionStatisticsBuilder_ == null) {
++          regionStatisticsBuilder_ = new com.google.protobuf.SingleFieldBuilder<
++              org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MultiRegionLoadStats, org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MultiRegionLoadStats.Builder, org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MultiRegionLoadStatsOrBuilder>(
++                  regionStatistics_,
++                  getParentForChildren(),
++                  isClean());
++          regionStatistics_ = null;
++        }
++        return regionStatisticsBuilder_;
++      }
++
++      // optional .hbase.pb.Result result = 4;
++      private org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Result result_ = org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Result.getDefaultInstance();
++      private com.google.protobuf.SingleFieldBuilder<
++          org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Result, org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Result.Builder, org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ResultOrBuilder> resultBuilder_;
++      /**
++       * <code>optional .hbase.pb.Result result = 4;</code>
++       *
++       * <pre>
++       * 'result' is used to return the original row;
++       * </pre>
++       */
++      public boolean hasResult() {
++        return ((bitField0_ & 0x00000008) == 0x00000008);
++      }
++      /**
++       * <code>optional .hbase.pb.Result result = 4;</code>
++       *
++       * <pre>
++       * 'result' is used to return the original row;
++       * </pre>
++       */
++      public org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Result getResult() {
++        if (resultBuilder_ == null) {
++          return result_;
++        } else {
++          return resultBuilder_.getMessage();
++        }
++      }
++      /**
++       * <code>optional .hbase.pb.Result result = 4;</code>
++       *
++       * <pre>
++       * 'result' is used to return the original row;
++       * </pre>
++       */
++      public Builder setResult(org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Result value) {
++        if (resultBuilder_ == null) {
++          if (value == null) {
++            throw new NullPointerException();
++          }
++          result_ = value;
++          onChanged();
++        } else {
++          resultBuilder_.setMessage(value);
++        }
++        bitField0_ |= 0x00000008;
++        return this;
++      }
++      /**
++       * <code>optional .hbase.pb.Result result = 4;</code>
++       *
++       * <pre>
++       * 'result' is used to return the original row;
++       * </pre>
++       */
++      public Builder setResult(
++          org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Result.Builder builderForValue) {
++        if (resultBuilder_ == null) {
++          result_ = builderForValue.build();
++          onChanged();
++        } else {
++          resultBuilder_.setMessage(builderForValue.build());
++        }
++        bitField0_ |= 0x00000008;
++        return this;
++      }
++      /**
++       * <code>optional .hbase.pb.Result result = 4;</code>
++       *
++       * <pre>
++       * 'result' is used to return the original row;
++       * </pre>
++       */
++      public Builder mergeResult(org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Result value) {
++        if (resultBuilder_ == null) {
++          if (((bitField0_ & 0x00000008) == 0x00000008) &&
++              result_ != org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Result.getDefaultInstance()) {
++            result_ =
++              org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Result.newBuilder(result_).mergeFrom(value).buildPartial();
++          } else {
++            result_ = value;
++          }
++          onChanged();
++        } else {
++          resultBuilder_.mergeFrom(value);
++        }
++        bitField0_ |= 0x00000008;
++        return this;
++      }
++      /**
++       * <code>optional .hbase.pb.Result result = 4;</code>
++       *
++       * <pre>
++       * 'result' is used to return the original row;
++       * </pre>
++       */
++      public Builder clearResult() {
++        if (resultBuilder_ == null) {
++          result_ = org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Result.getDefaultInstance();
++          onChanged();
++        } else {
++          resultBuilder_.clear();
++        }
++        bitField0_ = (bitField0_ & ~0x00000008);
++        return this;
++      }
++      /**
++       * <code>optional .hbase.pb.Result result = 4;</code>
++       *
++       * <pre>
++       * 'result' is used to return the original row;
++       * </pre>
++       */
++      public org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Result.Builder getResultBuilder() {
++        bitField0_ |= 0x00000008;
++        onChanged();
++        return getResultFieldBuilder().getBuilder();
++      }
++      /**
++       * <code>optional .hbase.pb.Result result = 4;</code>
++       *
++       * <pre>
++       * 'result' is used to return the original row;
++       * </pre>
++       */
++      public org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ResultOrBuilder getResultOrBuilder() {
++        if (resultBuilder_ != null) {
++          return resultBuilder_.getMessageOrBuilder();
++        } else {
++          return result_;
++        }
++      }
++      /**
++       * <code>optional .hbase.pb.Result result = 4;</code>
++       *
++       * <pre>
++       * 'result' is used to return the original row;
++       * </pre>
++       */
++      private com.google.protobuf.SingleFieldBuilder<
++          org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Result, org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Result.Builder, org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ResultOrBuilder> 
++          getResultFieldBuilder() {
++        if (resultBuilder_ == null) {
++          resultBuilder_ = new com.google.protobuf.SingleFieldBuilder<
++              org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Result, org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Result.Builder, org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ResultOrBuilder>(
++                  result_,
++                  getParentForChildren(),
++                  isClean());
++          result_ = null;
++        }
++        return resultBuilder_;
++      }
++
++      // @@protoc_insertion_point(builder_scope:hbase.pb.MultiAndGetRowResponse)
++    }
++
++    static {
++      defaultInstance = new MultiAndGetRowResponse(true);
++      defaultInstance.initFields();
++    }
++
++    // @@protoc_insertion_point(class_scope:hbase.pb.MultiAndGetRowResponse)
++  }
++
++  /**
+    * Protobuf service {@code hbase.pb.ClientService}
+    */
+   public static abstract class ClientService
+@@ -34859,6 +37226,18 @@
+           org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MultiRequest request,
+           com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MultiResponse> done);
+ 
++      /**
++       * <code>rpc MultiAndGetRow(.hbase.pb.MultiAndGetRowRequest) returns (.hbase.pb.MultiAndGetRowResponse);</code>
++       *
++       * <pre>
++       *Added by Yuanguo. The same as Multi, but return the original row.
++       * </pre>
++       */
++      public abstract void multiAndGetRow(
++          com.google.protobuf.RpcController controller,
++          org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MultiAndGetRowRequest request,
++          com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MultiAndGetRowResponse> done);
++
+     }
+ 
+     public static com.google.protobuf.Service newReflectiveService(
+@@ -34920,6 +37299,14 @@
+           impl.multi(controller, request, done);
+         }
+ 
++        @java.lang.Override
++        public  void multiAndGetRow(
++            com.google.protobuf.RpcController controller,
++            org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MultiAndGetRowRequest request,
++            com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MultiAndGetRowResponse> done) {
++          impl.multiAndGetRow(controller, request, done);
++        }
++
+       };
+     }
+ 
+@@ -34956,6 +37343,8 @@
+               return impl.execRegionServerService(controller, (org.apache.hadoop.hbase.protobuf.generated.ClientProtos.CoprocessorServiceRequest)request);
+             case 6:
+               return impl.multi(controller, (org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MultiRequest)request);
++            case 7:
++              return impl.multiAndGetRow(controller, (org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MultiAndGetRowRequest)request);
+             default:
+               throw new java.lang.AssertionError("Can't get here.");
+           }
+@@ -34984,6 +37373,8 @@
+               return org.apache.hadoop.hbase.protobuf.generated.ClientProtos.CoprocessorServiceRequest.getDefaultInstance();
+             case 6:
+               return org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MultiRequest.getDefaultInstance();
++            case 7:
++              return org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MultiAndGetRowRequest.getDefaultInstance();
+             default:
+               throw new java.lang.AssertionError("Can't get here.");
+           }
+@@ -35012,6 +37403,8 @@
+               return org.apache.hadoop.hbase.protobuf.generated.ClientProtos.CoprocessorServiceResponse.getDefaultInstance();
+             case 6:
+               return org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MultiResponse.getDefaultInstance();
++            case 7:
++              return org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MultiAndGetRowResponse.getDefaultInstance();
+             default:
+               throw new java.lang.AssertionError("Can't get here.");
+           }
+@@ -35076,6 +37469,18 @@
+         org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MultiRequest request,
+         com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MultiResponse> done);
+ 
++    /**
++     * <code>rpc MultiAndGetRow(.hbase.pb.MultiAndGetRowRequest) returns (.hbase.pb.MultiAndGetRowResponse);</code>
++     *
++     * <pre>
++     *Added by Yuanguo. The same as Multi, but return the original row.
++     * </pre>
++     */
++    public abstract void multiAndGetRow(
++        com.google.protobuf.RpcController controller,
++        org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MultiAndGetRowRequest request,
++        com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MultiAndGetRowResponse> done);
++
+     public static final
+         com.google.protobuf.Descriptors.ServiceDescriptor
+         getDescriptor() {
+@@ -35133,6 +37538,11 @@
+             com.google.protobuf.RpcUtil.<org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MultiResponse>specializeCallback(
+               done));
+           return;
++        case 7:
++          this.multiAndGetRow(controller, (org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MultiAndGetRowRequest)request,
++            com.google.protobuf.RpcUtil.<org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MultiAndGetRowResponse>specializeCallback(
++              done));
++          return;
+         default:
+           throw new java.lang.AssertionError("Can't get here.");
+       }
+@@ -35161,6 +37571,8 @@
+           return org.apache.hadoop.hbase.protobuf.generated.ClientProtos.CoprocessorServiceRequest.getDefaultInstance();
+         case 6:
+           return org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MultiRequest.getDefaultInstance();
++        case 7:
++          return org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MultiAndGetRowRequest.getDefaultInstance();
+         default:
+           throw new java.lang.AssertionError("Can't get here.");
+       }
+@@ -35189,6 +37601,8 @@
+           return org.apache.hadoop.hbase.protobuf.generated.ClientProtos.CoprocessorServiceResponse.getDefaultInstance();
+         case 6:
+           return org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MultiResponse.getDefaultInstance();
++        case 7:
++          return org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MultiAndGetRowResponse.getDefaultInstance();
+         default:
+           throw new java.lang.AssertionError("Can't get here.");
+       }
+@@ -35314,6 +37728,21 @@
+             org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MultiResponse.class,
+             org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MultiResponse.getDefaultInstance()));
+       }
++
++      public  void multiAndGetRow(
++          com.google.protobuf.RpcController controller,
++          org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MultiAndGetRowRequest request,
++          com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MultiAndGetRowResponse> done) {
++        channel.callMethod(
++          getDescriptor().getMethods().get(7),
++          controller,
++          request,
++          org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MultiAndGetRowResponse.getDefaultInstance(),
++          com.google.protobuf.RpcUtil.generalizeCallback(
++            done,
++            org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MultiAndGetRowResponse.class,
++            org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MultiAndGetRowResponse.getDefaultInstance()));
++      }
+     }
+ 
+     public static BlockingInterface newBlockingStub(
+@@ -35356,6 +37785,11 @@
+           com.google.protobuf.RpcController controller,
+           org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MultiRequest request)
+           throws com.google.protobuf.ServiceException;
++
++      public org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MultiAndGetRowResponse multiAndGetRow(
++          com.google.protobuf.RpcController controller,
++          org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MultiAndGetRowRequest request)
++          throws com.google.protobuf.ServiceException;
+     }
+ 
+     private static final class BlockingStub implements BlockingInterface {
+@@ -35448,6 +37882,18 @@
+           org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MultiResponse.getDefaultInstance());
+       }
+ 
++
++      public org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MultiAndGetRowResponse multiAndGetRow(
++          com.google.protobuf.RpcController controller,
++          org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MultiAndGetRowRequest request)
++          throws com.google.protobuf.ServiceException {
++        return (org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MultiAndGetRowResponse) channel.callBlockingMethod(
++          getDescriptor().getMethods().get(7),
++          controller,
++          request,
++          org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MultiAndGetRowResponse.getDefaultInstance());
++      }
++
+     }
+ 
+     // @@protoc_insertion_point(class_scope:hbase.pb.ClientService)
+@@ -35604,10 +38050,20 @@
+     com.google.protobuf.GeneratedMessage.FieldAccessorTable
+       internal_static_hbase_pb_MultiRequest_fieldAccessorTable;
+   private static com.google.protobuf.Descriptors.Descriptor
++    internal_static_hbase_pb_MultiAndGetRowRequest_descriptor;
++  private static
++    com.google.protobuf.GeneratedMessage.FieldAccessorTable
++      internal_static_hbase_pb_MultiAndGetRowRequest_fieldAccessorTable;
++  private static com.google.protobuf.Descriptors.Descriptor
+     internal_static_hbase_pb_MultiResponse_descriptor;
+   private static
+     com.google.protobuf.GeneratedMessage.FieldAccessorTable
+       internal_static_hbase_pb_MultiResponse_fieldAccessorTable;
++  private static com.google.protobuf.Descriptors.Descriptor
++    internal_static_hbase_pb_MultiAndGetRowResponse_descriptor;
++  private static
++    com.google.protobuf.GeneratedMessage.FieldAccessorTable
++      internal_static_hbase_pb_MultiAndGetRowResponse_fieldAccessorTable;
+ 
+   public static com.google.protobuf.Descriptors.FileDescriptor
+       getDescriptor() {
+@@ -35740,26 +38196,37 @@
+       "b.NameBytesPair\"x\n\014MultiRequest\022,\n\014regio" +
+       "nAction\030\001 \003(\0132\026.hbase.pb.RegionAction\022\022\n" +
+       "\nnonceGroup\030\002 \001(\004\022&\n\tcondition\030\003 \001(\0132\023.h" +
+-      "base.pb.Condition\"\226\001\n\rMultiResponse\0228\n\022r" +
+-      "egionActionResult\030\001 \003(\0132\034.hbase.pb.Regio" +
+-      "nActionResult\022\021\n\tprocessed\030\002 \001(\010\0228\n\020regi" +
+-      "onStatistics\030\003 \001(\0132\036.hbase.pb.MultiRegio" +
+-      "nLoadStats*\'\n\013Consistency\022\n\n\006STRONG\020\000\022\014\n" +
+-      "\010TIMELINE\020\0012\203\004\n\rClientService\0222\n\003Get\022\024.h" +
+-      "base.pb.GetRequest\032\025.hbase.pb.GetRespons",
+-      "e\022;\n\006Mutate\022\027.hbase.pb.MutateRequest\032\030.h" +
+-      "base.pb.MutateResponse\0225\n\004Scan\022\025.hbase.p" +
+-      "b.ScanRequest\032\026.hbase.pb.ScanResponse\022P\n" +
+-      "\rBulkLoadHFile\022\036.hbase.pb.BulkLoadHFileR" +
+-      "equest\032\037.hbase.pb.BulkLoadHFileResponse\022" +
+-      "X\n\013ExecService\022#.hbase.pb.CoprocessorSer" +
+-      "viceRequest\032$.hbase.pb.CoprocessorServic" +
+-      "eResponse\022d\n\027ExecRegionServerService\022#.h" +
+-      "base.pb.CoprocessorServiceRequest\032$.hbas" +
+-      "e.pb.CoprocessorServiceResponse\0228\n\005Multi",
+-      "\022\026.hbase.pb.MultiRequest\032\027.hbase.pb.Mult" +
+-      "iResponseBB\n*org.apache.hadoop.hbase.pro" +
+-      "tobuf.generatedB\014ClientProtosH\001\210\001\001\240\001\001"
++      "base.pb.Condition\"\201\001\n\025MultiAndGetRowRequ" +
++      "est\022,\n\014regionAction\030\001 \003(\0132\026.hbase.pb.Reg" +
++      "ionAction\022\022\n\nnonceGroup\030\002 \001(\004\022&\n\tconditi" +
++      "on\030\003 \001(\0132\023.hbase.pb.Condition\"\226\001\n\rMultiR" +
++      "esponse\0228\n\022regionActionResult\030\001 \003(\0132\034.hb" +
++      "ase.pb.RegionActionResult\022\021\n\tprocessed\030\002" +
++      " \001(\010\0228\n\020regionStatistics\030\003 \001(\0132\036.hbase.p",
++      "b.MultiRegionLoadStats\"\301\001\n\026MultiAndGetRo" +
++      "wResponse\0228\n\022regionActionResult\030\001 \003(\0132\034." +
++      "hbase.pb.RegionActionResult\022\021\n\tprocessed" +
++      "\030\002 \001(\010\0228\n\020regionStatistics\030\003 \001(\0132\036.hbase" +
++      ".pb.MultiRegionLoadStats\022 \n\006result\030\004 \001(\013" +
++      "2\020.hbase.pb.Result*\'\n\013Consistency\022\n\n\006STR" +
++      "ONG\020\000\022\014\n\010TIMELINE\020\0012\330\004\n\rClientService\0222\n" +
++      "\003Get\022\024.hbase.pb.GetRequest\032\025.hbase.pb.Ge" +
++      "tResponse\022;\n\006Mutate\022\027.hbase.pb.MutateReq" +
++      "uest\032\030.hbase.pb.MutateResponse\0225\n\004Scan\022\025",
++      ".hbase.pb.ScanRequest\032\026.hbase.pb.ScanRes" +
++      "ponse\022P\n\rBulkLoadHFile\022\036.hbase.pb.BulkLo" +
++      "adHFileRequest\032\037.hbase.pb.BulkLoadHFileR" +
++      "esponse\022X\n\013ExecService\022#.hbase.pb.Coproc" +
++      "essorServiceRequest\032$.hbase.pb.Coprocess" +
++      "orServiceResponse\022d\n\027ExecRegionServerSer" +
++      "vice\022#.hbase.pb.CoprocessorServiceReques" +
++      "t\032$.hbase.pb.CoprocessorServiceResponse\022" +
++      "8\n\005Multi\022\026.hbase.pb.MultiRequest\032\027.hbase" +
++      ".pb.MultiResponse\022S\n\016MultiAndGetRow\022\037.hb",
++      "ase.pb.MultiAndGetRowRequest\032 .hbase.pb." +
++      "MultiAndGetRowResponseBB\n*org.apache.had" +
++      "oop.hbase.protobuf.generatedB\014ClientProt" +
++      "osH\001\210\001\001\240\001\001"
+     };
+     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
+       new com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner() {
+@@ -35946,12 +38413,24 @@
+             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
+               internal_static_hbase_pb_MultiRequest_descriptor,
+               new java.lang.String[] { "RegionAction", "NonceGroup", "Condition", });
++          internal_static_hbase_pb_MultiAndGetRowRequest_descriptor =
++            getDescriptor().getMessageTypes().get(27);
++          internal_static_hbase_pb_MultiAndGetRowRequest_fieldAccessorTable = new
++            com.google.protobuf.GeneratedMessage.FieldAccessorTable(
++              internal_static_hbase_pb_MultiAndGetRowRequest_descriptor,
++              new java.lang.String[] { "RegionAction", "NonceGroup", "Condition", });
+           internal_static_hbase_pb_MultiResponse_descriptor =
+-            getDescriptor().getMessageTypes().get(27);
++            getDescriptor().getMessageTypes().get(28);
+           internal_static_hbase_pb_MultiResponse_fieldAccessorTable = new
+             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
+               internal_static_hbase_pb_MultiResponse_descriptor,
+               new java.lang.String[] { "RegionActionResult", "Processed", "RegionStatistics", });
++          internal_static_hbase_pb_MultiAndGetRowResponse_descriptor =
++            getDescriptor().getMessageTypes().get(29);
++          internal_static_hbase_pb_MultiAndGetRowResponse_fieldAccessorTable = new
++            com.google.protobuf.GeneratedMessage.FieldAccessorTable(
++              internal_static_hbase_pb_MultiAndGetRowResponse_descriptor,
++              new java.lang.String[] { "RegionActionResult", "Processed", "RegionStatistics", "Result", });
+           return null;
+         }
+       };
+Index: hbase-server/src/test/java/org/apache/hadoop/hbase/master/MockRegionServer.java
+===================================================================
+--- hbase-server/src/test/java/org/apache/hadoop/hbase/master/MockRegionServer.java	(revision 695)
++++ hbase-server/src/test/java/org/apache/hadoop/hbase/master/MockRegionServer.java	(revision 704)
+@@ -88,6 +88,7 @@
+ import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.GetRequest;
+ import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.GetResponse;
+ import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MultiRequest;
++import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MultiAndGetRowRequest;
+ import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutateRequest;
+ import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutateResponse;
+ import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ScanRequest;
+@@ -440,7 +441,16 @@
+     return null;
+   }
+ 
++
+   @Override
++  public org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MultiAndGetRowResponse multiAndGetRow(
++      RpcController controller, MultiAndGetRowRequest request) throws ServiceException {
++    // TODO Auto-generated method stub
++    return null;
++  }
++
++
++  @Override
+   public GetRegionInfoResponse getRegionInfo(RpcController controller,
+       GetRegionInfoRequest request) throws ServiceException {
+     GetRegionInfoResponse.Builder builder = GetRegionInfoResponse.newBuilder();
+Index: hbase-server/src/main/java/org/apache/hadoop/hbase/regionserver/HRegion.java
+===================================================================
+--- hbase-server/src/main/java/org/apache/hadoop/hbase/regionserver/HRegion.java	(revision 695)
++++ hbase-server/src/main/java/org/apache/hadoop/hbase/regionserver/HRegion.java	(revision 704)
+@@ -3778,6 +3778,236 @@
+     }
+   }
+ 
++  @Override
++  public Pair<Boolean, Result> checkAndRowMutateAndGetRow(byte [] row, byte [] family, byte [] qualifier,
++      CompareOp compareOp, ByteArrayComparable comparator, RowMutations rm,
++      boolean writeToWAL) throws IOException
++  {
++    checkReadOnly();
++    //TODO, add check for value length or maybe even better move this to the
++    //client if this becomes a global setting
++    checkResources();
++
++    startRegionOperation();
++    try
++    {
++      Get get = new Get(row);
++      checkFamily(family);
++
++      //Yuanguo: get the entire row, so comment out the following line
++      //get.addColumn(family, qualifier);  
++
++      checkRow(row, "checkAndRowMutateAndGetRow");
++      // Lock row - note that doBatchMutate will relock this row if called
++      RowLock rowLock = getRowLockInternal(get.getRow(), false);
++      // wait for all previous transactions to complete (with lock held)
++      mvcc.await();
++
++      try
++      {
++        boolean valueIsNull = comparator.getValue() == null || comparator.getValue().length == 0;
++
++        boolean matches = false;
++        Cell kv = null;
++        long cellTs = 0;
++
++        List<Cell> result = get(get, false);
++        boolean stale = this.getRegionInfo().getReplicaId() != 0;
++        Result rObj = Result.create(result, null, stale);
++        //Yuanguo: LOG <<<<
++        LOG.info("Yuanguo: HRegion::checkAndRowMutateAndGetRow() result=" + result);
++        LOG.info("Yuanguo: HRegion::checkAndRowMutateAndGetRow() rObj=" + rObj);
++        //Yuanguo: LOG >>>>
++
++        for(Cell c:result)
++        {
++          byte[] fam = c.getFamilyArray();
++          int famOffst = c.getFamilyOffset();
++          byte famLen = c.getFamilyLength();
++
++          if(Bytes.compareTo(family, 0, family.length, fam, famOffst, famLen)==0)
++          {
++            byte[] col = c.getQualifierArray();
++            int colOffst = c.getQualifierOffset();
++            int colLen = c.getQualifierLength();
++
++            if(Bytes.compareTo(qualifier, 0, qualifier.length, col, colOffst, colLen)==0)
++            {
++              kv = c;
++              cellTs = kv.getTimestamp();
++              break;
++            }
++          }
++        }
++
++        ////////////
++        if ( kv == null || ( kv != null && kv.getValueLength() == 0)) //Yuanguo: current value is null/empty;
++        {
++          if(valueIsNull) //Yuanguo: comparator is null/empty;
++          {
++            switch (compareOp)
++            {
++              case LESS:
++                matches = false;    // null/empty < null/empty       false
++                break;
++              case LESS_OR_EQUAL:
++                matches = true;     // null/empty <= null/empty      true
++                break;
++              case EQUAL:
++                matches = true;     // null/empty == null/empty      true
++                break;
++              case NOT_EQUAL:
++                matches = false;    // null/empty != null/empty      false
++                break;
++              case GREATER_OR_EQUAL:
++                matches = true;     // null/empty >= null/empty      true 
++                break;
++              case GREATER:
++                matches = false;    // null/empty > null/empty       false
++                break;
++              default:
++                throw new RuntimeException("Unknown Compare op " + compareOp.name());
++            }
++          }
++          else  //Yuanguo: comparator is not null/empty, it's any string; 
++          {
++            switch (compareOp)
++            {
++              case LESS:
++                matches = false;    // "AnyString" < null/empty       false
++                break;
++              case LESS_OR_EQUAL:
++                matches = false;    // "AnyString" <= null/empty      false 
++                break;
++              case EQUAL:
++                matches = false;    // "AnyString" == null/empty      false 
++                break;
++              case NOT_EQUAL:
++                matches = true;     // "AnyString" != null/empty      true
++                break;
++              case GREATER_OR_EQUAL:
++                matches = true;     // "AnyString" >= null/empty      true 
++                break;
++              case GREATER:
++                matches = true;     // "AnyString" > null/empty       true 
++                break;
++              default:
++                throw new RuntimeException("Unknown Compare op " + compareOp.name());
++            }
++          }
++        }
++        else //Yuanguo:  current value is NOT null/empty;
++        {
++          if(valueIsNull) //Yuanguo: comparator is null/empty;
++          {
++            switch (compareOp)
++            {
++              case LESS:
++                matches = true;     // null/empty < "AnyString"      true 
++                break;
++              case LESS_OR_EQUAL:
++                matches = true;     // null/empty <= "AnyString"     true
++                break;
++              case EQUAL:
++                matches = false;    // null/empty == "AnyString"     false 
++                break;
++              case NOT_EQUAL:
++                matches = true;     // null/empty != "AnyString"     true 
++                break;
++              case GREATER_OR_EQUAL:
++                matches = false;    // null/empty >= "AnyString"     false 
++                break;
++              case GREATER:
++                matches = false;    // null/empty > "AnyString"      false
++                break;
++              default:
++                throw new RuntimeException("Unknown Compare op " + compareOp.name());
++            }
++          }
++          else  //Yuanguo: comparator is not null/empty, it's any string; 
++          {
++            int compareResult = comparator.compareTo(kv.getValueArray(), kv.getValueOffset(), kv.getValueLength());
++            switch (compareOp)
++            {
++              case LESS:
++                matches = compareResult < 0;
++                break;
++              case LESS_OR_EQUAL:
++                matches = compareResult <= 0;
++                break;
++              case EQUAL:
++                matches = compareResult == 0;
++                break;
++              case NOT_EQUAL:
++                matches = compareResult != 0;
++                break;
++              case GREATER_OR_EQUAL:
++                matches = compareResult >= 0;
++                break;
++              case GREATER:
++                matches = compareResult > 0;
++                break;
++              default:
++                throw new RuntimeException("Unknown Compare op " + compareOp.name());
++            }
++          }
++        }
++        ///////////
++
++        //If matches put the new put or delete the new delete
++        if (matches)
++        {
++          // We have acquired the row lock already. If the system clock is NOT monotonically
++          // non-decreasing (see HBASE-14070) we should make sure that the mutation has a
++          // larger timestamp than what was observed via Get. doBatchMutate already does this, but
++          // there is no way to pass the cellTs. See HBASE-14054.
++          long now = EnvironmentEdgeManager.currentTime();
++          long ts = Math.max(now, cellTs); // ensure write is not eclipsed
++          byte[] byteTs = Bytes.toBytes(ts);
++
++          for (Mutation w : rm.getMutations())
++          {
++            if (w instanceof Put)
++            {
++              updateCellTimestamps(w.getFamilyCellMap().values(), byteTs);
++            }
++            // else delete is not needed since it already does a second get, and sets the timestamp
++            // from get (see prepareDeleteTimestamps).
++          }
++
++          // All edits for the given row (across all column families) must
++          // happen atomically.
++          mutateRow(rm);
++          this.checkAndMutateChecksPassed.increment();
++
++          Pair<Boolean, Result> retPair = new Pair<Boolean, Result>();
++          retPair.setFirst(new Boolean(true));
++          retPair.setSecond(rObj);
++          LOG.info("Yuanguo: HRegion::checkAndRowMutateAndGetRow() processed=true");
++
++          return retPair;
++        }
++        this.checkAndMutateChecksFailed.increment();
++
++        Pair<Boolean, Result> retPair = new Pair<Boolean, Result>();
++        retPair.setFirst(new Boolean(false));
++        retPair.setSecond(rObj);
++        LOG.info("Yuanguo: HRegion::checkAndRowMutateAndGetRow() processed=false");
++
++        return retPair;
++      }
++      finally
++      {
++        rowLock.release();
++      }
++    }
++    finally
++    {
++      closeRegionOperation();
++    }
++  }
++
++
+   private void doBatchMutate(Mutation mutation) throws IOException {
+     // Currently this is only called for puts and deletes, so no nonces.
+     OperationStatus[] batchMutate = this.batchMutate(new Mutation[]{mutation});
+Index: hbase-server/src/main/java/org/apache/hadoop/hbase/regionserver/RSRpcServices.java
+===================================================================
+--- hbase-server/src/main/java/org/apache/hadoop/hbase/regionserver/RSRpcServices.java	(revision 695)
++++ hbase-server/src/main/java/org/apache/hadoop/hbase/regionserver/RSRpcServices.java	(revision 704)
+@@ -152,7 +152,9 @@
+ import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.GetResponse;
+ import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MultiRegionLoadStats;
+ import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MultiRequest;
++import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MultiAndGetRowRequest;
+ import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MultiResponse;
++import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MultiAndGetRowResponse;
+ import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutateRequest;
+ import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutateResponse;
+ import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto;
+@@ -521,7 +523,61 @@
+         comparator, rm, Boolean.TRUE);
+   }
+ 
++
+   /**
++   * The same as checkAndRowMutate, but return the original row;
++   *
++   * @param region
++   * @param actions
++   * @param cellScanner if non-null, the mutation data -- the Cell content.
++   * @param row
++   * @param family
++   * @param qualifier
++   * @param compareOp
++   * @param comparator @throws IOException
++   */
++  private Pair<Boolean,Result> checkAndRowMutateAndGetRow(final Region region, final List<ClientProtos.Action> actions,
++      final CellScanner cellScanner, byte[] row, byte[] family, byte[] qualifier,
++      CompareOp compareOp, ByteArrayComparable comparator,
++                                    RegionActionResult.Builder builder) throws IOException {
++    if (!region.getRegionInfo().isMetaTable()) {
++      regionServer.cacheFlusher.reclaimMemStoreMemory();
++    }
++    RowMutations rm = null;
++    int i = 0;
++    ClientProtos.ResultOrException.Builder resultOrExceptionOrBuilder =
++        ClientProtos.ResultOrException.newBuilder();
++    for (ClientProtos.Action action: actions) {
++      if (action.hasGet()) {
++        throw new DoNotRetryIOException("Atomic put and/or delete only, not a Get=" +
++            action.getGet());
++      }
++      MutationType type = action.getMutation().getMutateType();
++      if (rm == null) {
++        rm = new RowMutations(action.getMutation().getRow().toByteArray());
++      }
++      switch (type) {
++        case PUT:
++          rm.add(ProtobufUtil.toPut(action.getMutation(), cellScanner));
++          break;
++        case DELETE:
++          rm.add(ProtobufUtil.toDelete(action.getMutation(), cellScanner));
++          break;
++        default:
++          throw new DoNotRetryIOException("Atomic put and/or delete only, not " + type.name());
++      }
++      // To unify the response format with doNonAtomicRegionMutation and read through client's
++      // AsyncProcess we have to add an empty result instance per operation
++      resultOrExceptionOrBuilder.clear();
++      resultOrExceptionOrBuilder.setIndex(i++);
++      builder.addResultOrException(
++          resultOrExceptionOrBuilder.build());
++    }
++    return region.checkAndRowMutateAndGetRow(row, family, qualifier, compareOp,
++        comparator, rm, Boolean.TRUE);
++  }
++
++  /**
+    * Execute an append mutation.
+    *
+    * @param region
+@@ -2264,6 +2320,194 @@
+     return responseBuilder.build();
+   }
+ 
++
++  /**
++   * Same as multi, but return the original row;
++   *
++   * @param rpcc the RPC controller
++   * @param request the multiAndGetRow request
++   * @throws ServiceException
++   */
++  @Override
++  public MultiAndGetRowResponse multiAndGetRow(final RpcController rpcc, final MultiAndGetRowRequest request)
++  throws ServiceException
++  {
++    LOG.info("Yuanguo: Enter multiAndGetRow");
++    try
++    {
++      checkOpen();
++    }
++    catch (IOException ie)
++    {
++      throw new ServiceException(ie);
++    }
++
++    // rpc controller is how we bring in data via the back door;  it is unprotobuf'ed data.
++    // It is also the conduit via which we pass back data.
++    PayloadCarryingRpcController controller = (PayloadCarryingRpcController)rpcc;
++    CellScanner cellScanner = controller != null ? controller.cellScanner(): null;
++    if (controller != null)
++    {
++      LOG.info("Yuanguo: controller NOT null");
++      controller.setCellScanner(null);
++    }
++
++    long nonceGroup = request.hasNonceGroup() ? request.getNonceGroup() : HConstants.NO_NONCE;
++
++    // this will contain all the cells that we need to return. It's created later, if needed.
++    List<CellScannable> cellsToReturn = null;
++    MultiAndGetRowResponse.Builder responseBuilder = MultiAndGetRowResponse.newBuilder();
++    RegionActionResult.Builder regionActionResultBuilder = RegionActionResult.newBuilder();
++    Boolean processed = null;
++    Result  result    = null;
++
++    this.rpcMultiRequestCount.increment();
++    Map<RegionSpecifier, ClientProtos.RegionLoadStats> regionStats = new HashMap<>(request.getRegionActionCount());
++    for(RegionAction regionAction : request.getRegionActionList())
++    {
++      LOG.info("Yuanguo: multiAndGetRow, get a regionAction");
++
++      this.requestCount.add(regionAction.getActionCount());
++      OperationQuota quota;
++      Region region;
++      regionActionResultBuilder.clear();
++      RegionSpecifier regionSpecifier = regionAction.getRegion();
++
++      try
++      {
++        region = getRegion(regionSpecifier);
++        quota = getQuotaManager().checkQuota(region, regionAction.getActionList());
++      }
++      catch (IOException e)
++      {
++        rpcServer.getMetrics().exception(e);
++        regionActionResultBuilder.setException(ResponseConverter.buildException(e));
++        responseBuilder.addRegionActionResult(regionActionResultBuilder.build());
++        // All Mutations in this RegionAction not executed as we can not see the Region online here
++        // in this RS. Will be retried from Client. Skipping all the Cells in CellScanner
++        // corresponding to these Mutations.
++        if (cellScanner != null)
++        {
++          skipCellsForMutations(regionAction.getActionList(), cellScanner);
++        }
++        continue;  // For this region it's a failure.
++      }
++
++      if (regionAction.hasAtomic() && regionAction.getAtomic())
++      {
++        // How does this call happen?  It may need some work to play well w/ the surroundings.
++        // Need to return an item per Action along w/ Action index.  TODO.
++        try
++        {
++          if (request.hasCondition())
++          {
++            Condition condition = request.getCondition();
++            byte[] row = condition.getRow().toByteArray();
++            byte[] family = condition.getFamily().toByteArray();
++            byte[] qualifier = condition.getQualifier().toByteArray();
++            CompareOp compareOp = CompareOp.valueOf(condition.getCompareType().name());
++            ByteArrayComparable comparator =
++                ProtobufUtil.toComparator(condition.getComparator());
++
++            Pair<Boolean, Result> retPair = checkAndRowMutateAndGetRow(region, regionAction.getActionList(),
++                  cellScanner, row, family, qualifier, compareOp,
++                  comparator, regionActionResultBuilder);
++
++            processed = retPair.getFirst();
++            result = retPair.getSecond();
++
++
++            if(processed == null)
++            {
++              LOG.error("Yuanguo: processed is null");
++            }
++
++            if(result == null)
++            {
++              LOG.error("Yuanguo: result is null");
++            }
++            else
++            {
++              ////Yuanguo: LOG
++              Cell[] cells = result.rawCells();
++
++              LOG.info("Yuanguo: result is NOT null. cells.length=" + cells.length);
++
++              for(Cell c:cells)
++              {
++                LOG.info("Yuanguo: "                            + 
++                    new String(CellUtil.cloneRow(c))+"\t"        +
++                    new String(CellUtil.cloneFamily(c))+":"      +
++                    new String(CellUtil.cloneQualifier(c))+"\t"  +
++                    new String(CellUtil.cloneValue(c))+"\t"      +
++                    c.getTimestamp());
++              }
++              ////Yuanguo: LOG
++            }
++          }
++          else
++          {
++            mutateRows(region, regionAction.getActionList(), cellScanner,
++                regionActionResultBuilder);
++            processed = Boolean.TRUE;
++          }
++        }
++        catch (IOException e)
++        {
++          rpcServer.getMetrics().exception(e);
++          // As it's atomic, we may expect it's a global failure.
++          regionActionResultBuilder.setException(ResponseConverter.buildException(e));
++        }
++      }
++      else
++      {
++        // doNonAtomicRegionMutation manages the exception internally
++        cellsToReturn = doNonAtomicRegionMutation(region, quota, regionAction, cellScanner,
++            regionActionResultBuilder, cellsToReturn, nonceGroup);
++      }
++
++      responseBuilder.addRegionActionResult(regionActionResultBuilder.build());
++      quota.close();
++      ClientProtos.RegionLoadStats regionLoadStats = ((HRegion)region).getLoadStatistics();
++      if(regionLoadStats != null)
++      {
++        regionStats.put(regionSpecifier, regionLoadStats);
++      }
++    }
++
++    // Load the controller with the Cells to return.
++    if (cellsToReturn != null && !cellsToReturn.isEmpty() && controller != null)
++    {
++      controller.setCellScanner(CellUtil.createCellScanner(cellsToReturn));
++    }
++
++    if (processed != null)
++    {
++      LOG.info("Yuanguo: processed is NOT null, set it in response");
++      responseBuilder.setProcessed(processed);
++    }
++
++    if (result != null)
++    {
++      LOG.info("Yuanguo: result is NOT null, set it in response");
++      ClientProtos.Result pbr = ProtobufUtil.toResult(result);
++      responseBuilder.setResult(pbr);
++    }
++
++    MultiRegionLoadStats.Builder builder = MultiRegionLoadStats.newBuilder();
++    for(Entry<RegionSpecifier, ClientProtos.RegionLoadStats> stat: regionStats.entrySet())
++    {
++      builder.addRegion(stat.getKey());
++      builder.addStat(stat.getValue());
++    }
++    responseBuilder.setRegionStatistics(builder);
++
++    LOG.info("Yuanguo: Exit multiAndGetRow");
++
++    return responseBuilder.build();
++  }
++
++
+   private void skipCellsForMutations(List<Action> actions, CellScanner cellScanner) {
+     for (Action action : actions) {
+       skipCellsForMutation(action, cellScanner);
+Index: hbase-server/src/main/java/org/apache/hadoop/hbase/regionserver/Region.java
+===================================================================
+--- hbase-server/src/main/java/org/apache/hadoop/hbase/regionserver/Region.java	(revision 695)
++++ hbase-server/src/main/java/org/apache/hadoop/hbase/regionserver/Region.java	(revision 704)
+@@ -356,7 +356,26 @@
+       ByteArrayComparable comparator, RowMutations mutations, boolean writeToWAL)
+       throws IOException;
+ 
++
+   /**
++   * The same as checkAndRowMutate, but return the original row;
++   *
++   * @param row to check
++   * @param family column family to check
++   * @param qualifier column qualifier to check
++   * @param compareOp the comparison operator
++   * @param comparator
++   * @param mutations
++   * @param writeToWAL
++   * @return true if mutation was applied, false otherwise
++   * @throws IOException
++   */
++  Pair<Boolean,Result> checkAndRowMutateAndGetRow(byte [] row, byte [] family, byte [] qualifier, CompareOp compareOp,
++      ByteArrayComparable comparator, RowMutations mutations, boolean writeToWAL)
++      throws IOException;
++
++
++  /**
+    * Deletes the specified cells/row.
+    * @param delete
+    * @throws IOException
+Index: hbase-server/src/main/java/org/apache/hadoop/hbase/client/HTableWrapper.java
+===================================================================
+--- hbase-server/src/main/java/org/apache/hadoop/hbase/client/HTableWrapper.java	(revision 695)
++++ hbase-server/src/main/java/org/apache/hadoop/hbase/client/HTableWrapper.java	(revision 704)
+@@ -23,6 +23,7 @@
+ import java.util.List;
+ import java.util.Map;
+ import java.util.concurrent.ExecutorService;
++import org.apache.hadoop.hbase.util.Pair;
+ 
+ import org.apache.hadoop.conf.Configuration;
+ import org.apache.hadoop.hbase.HTableDescriptor;
+@@ -366,6 +367,14 @@
+     return table.checkAndMutate(row, family, qualifier, compareOp, value, rm);
+   }
+ 
++
++  @Override
++  public Pair<Boolean, Result> checkAndMutateAndGetRow(byte[] row, byte[] family, byte[] qualifier,
++      CompareOp compareOp, byte[] value, RowMutations rm) throws IOException {
++    return table.checkAndMutateAndGetRow(row, family, qualifier, compareOp, value, rm);
++  }
++
++
+   @Override public void setOperationTimeout(int operationTimeout) {
+     table.setOperationTimeout(operationTimeout);
+   }
+Index: hbase-rest/src/main/java/org/apache/hadoop/hbase/rest/client/RemoteHTable.java
+===================================================================
+--- hbase-rest/src/main/java/org/apache/hadoop/hbase/rest/client/RemoteHTable.java	(revision 695)
++++ hbase-rest/src/main/java/org/apache/hadoop/hbase/rest/client/RemoteHTable.java	(revision 704)
+@@ -29,6 +29,8 @@
+ import java.util.Set;
+ import java.util.TreeMap;
+ 
++import org.apache.hadoop.hbase.util.Pair;
++
+ import org.apache.commons.logging.Log;
+ import org.apache.commons.logging.LogFactory;
+ import org.apache.hadoop.conf.Configuration;
+@@ -858,6 +860,12 @@
+     throw new UnsupportedOperationException("checkAndMutate not implemented");
+   }
+ 
++  @Override public Pair<Boolean, Result> checkAndMutateAndGetRow(byte[] row, byte[] family, byte[] qualifier,
++      CompareOp compareOp, byte[] value, RowMutations rm) throws IOException {
++    throw new UnsupportedOperationException("checkAndMutateAndGetRow not implemented");
++  }
++
++
+   @Override public void setOperationTimeout(int operationTimeout) {
+     throw new UnsupportedOperationException();
+   }
+Index: hbase-client/src/test/java/org/apache/hadoop/hbase/client/TestClientNoCluster.java
+===================================================================
+--- hbase-client/src/test/java/org/apache/hadoop/hbase/client/TestClientNoCluster.java	(revision 695)
++++ hbase-client/src/test/java/org/apache/hadoop/hbase/client/TestClientNoCluster.java	(revision 704)
+@@ -61,7 +61,9 @@
+ import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.GetRequest;
+ import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.GetResponse;
+ import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MultiRequest;
++import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MultiAndGetRowRequest;
+ import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MultiResponse;
++import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MultiAndGetRowResponse;
+ import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutateRequest;
+ import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutateResponse;
+ import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.RegionAction;
+@@ -440,6 +442,30 @@
+     return builder.build();
+   }
+ 
++  static MultiAndGetRowResponse doMultiAndGetRowResponse(final SortedMap<byte [], Pair<HRegionInfo, ServerName>> meta,
++      final AtomicLong sequenceids, final MultiAndGetRowRequest request) {
++    // Make a response to match the request.  Act like there were no failures.
++    ClientProtos.MultiAndGetRowResponse.Builder builder = ClientProtos.MultiAndGetRowResponse.newBuilder();
++    // Per Region.
++    RegionActionResult.Builder regionActionResultBuilder =
++        RegionActionResult.newBuilder();
++    ResultOrException.Builder roeBuilder = ResultOrException.newBuilder();
++    for (RegionAction regionAction: request.getRegionActionList()) {
++      regionActionResultBuilder.clear();
++      // Per Action in a Region.
++      for (ClientProtos.Action action: regionAction.getActionList()) {
++        roeBuilder.clear();
++        // Return empty Result and proper index as result.
++        roeBuilder.setResult(ClientProtos.Result.getDefaultInstance());
++        roeBuilder.setIndex(action.getIndex());
++        regionActionResultBuilder.addResultOrException(roeBuilder.build());
++      }
++      builder.addRegionActionResult(regionActionResultBuilder.build());
++    }
++    return builder.build();
++  }
++
++
+   /**
+    * Fake 'server'.
+    * Implements the ClientService responding as though it were a 'server' (presumes a new
+@@ -527,7 +553,25 @@
+       }
+     }
+ 
++
+     @Override
++    public MultiAndGetRowResponse multiAndGetRow(RpcController controller, MultiAndGetRowRequest request)
++    throws ServiceException {
++      int concurrentInvocations = this.multiInvocationsCount.incrementAndGet();
++      try {
++        if (concurrentInvocations >= tooManyMultiRequests) {
++          throw new ServiceException(new RegionTooBusyException("concurrentInvocations=" +
++           concurrentInvocations));
++        }
++        Threads.sleep(multiPause);
++        return doMultiAndGetRowResponse(meta, sequenceids, request);
++      } finally {
++        this.multiInvocationsCount.decrementAndGet();
++      }
++    }
++
++
++    @Override
+     public CoprocessorServiceResponse execRegionServerService(RpcController controller,
+         CoprocessorServiceRequest request) throws ServiceException {
+       throw new NotImplementedException();
+Index: hbase-client/src/main/java/org/apache/hadoop/hbase/protobuf/RequestConverter.java
+===================================================================
+--- hbase-client/src/main/java/org/apache/hadoop/hbase/protobuf/RequestConverter.java	(revision 695)
++++ hbase-client/src/main/java/org/apache/hadoop/hbase/protobuf/RequestConverter.java	(revision 704)
+@@ -319,7 +319,56 @@
+     return request;
+   }
+ 
++
+   /**
++   * Create a protocol buffer MutateRequest for conditioned row mutations and get row;
++   *
++   * @param regionName
++   * @param row
++   * @param family
++   * @param qualifier
++   * @param comparator
++   * @param compareType
++   * @param rowMutations
++   * @return a mutate request
++   * @throws IOException
++   */
++  public static ClientProtos.MultiAndGetRowRequest buildMutateRequestAndGetRow(
++      final byte[] regionName, final byte[] row, final byte[] family,
++      final byte [] qualifier, final ByteArrayComparable comparator,
++      final CompareType compareType, final RowMutations rowMutations) throws IOException {
++    RegionAction.Builder builder =
++        getRegionActionBuilderWithRegion(RegionAction.newBuilder(), regionName);
++    builder.setAtomic(true);
++    ClientProtos.Action.Builder actionBuilder = ClientProtos.Action.newBuilder();
++    MutationProto.Builder mutationBuilder = MutationProto.newBuilder();
++    Condition condition = buildCondition(
++        row, family, qualifier, comparator, compareType);
++    for (Mutation mutation: rowMutations.getMutations()) {
++      MutationType mutateType = null;
++      if (mutation instanceof Put) {
++        mutateType = MutationType.PUT;
++      } else if (mutation instanceof Delete) {
++        mutateType = MutationType.DELETE;
++      } else {
++        throw new DoNotRetryIOException("RowMutations supports only put and delete, not " +
++            mutation.getClass().getName());
++      }
++      mutationBuilder.clear();
++      MutationProto mp = ProtobufUtil.toMutation(mutateType, mutation, mutationBuilder);
++      actionBuilder.clear();
++      actionBuilder.setMutation(mp);
++      builder.addAction(actionBuilder.build());
++    }
++    ClientProtos.MultiAndGetRowRequest request =
++        ClientProtos.MultiAndGetRowRequest.newBuilder().addRegionAction(builder.build())
++            .setCondition(condition).build();
++    return request;
++  }
++
++
++
++  /**
+    * Create a protocol buffer MutateRequest for a put
+    *
+    * @param regionName
+Index: hbase-client/src/main/java/org/apache/hadoop/hbase/protobuf/ResponseConverter.java
+===================================================================
+--- hbase-client/src/main/java/org/apache/hadoop/hbase/protobuf/ResponseConverter.java	(revision 695)
++++ hbase-client/src/main/java/org/apache/hadoop/hbase/protobuf/ResponseConverter.java	(revision 704)
+@@ -28,6 +28,7 @@
+ import org.apache.commons.logging.LogFactory;
+ import org.apache.hadoop.hbase.classification.InterfaceAudience;
+ import org.apache.hadoop.hbase.Cell;
++import org.apache.hadoop.hbase.CellUtil;
+ import org.apache.hadoop.hbase.CellScanner;
+ import org.apache.hadoop.hbase.DoNotRetryIOException;
+ import org.apache.hadoop.hbase.HRegionInfo;
+@@ -42,11 +43,13 @@
+ import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.ServerInfo;
+ import org.apache.hadoop.hbase.protobuf.generated.ClientProtos;
+ import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MultiRequest;
++import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MultiAndGetRowRequest;
+ import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.RegionAction;
+ import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.RegionActionResult;
+ import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ResultOrException;
+ import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ScanResponse;
+ import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MultiResponse;
++import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MultiAndGetRowResponse;
+ import org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.RegionStoreSequenceIds;
+ import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos;
+ import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameBytesPair;
+@@ -131,6 +134,13 @@
+           // Sometimes, the response is just "it was processed". Generally, this occurs for things
+           // like mutateRows where either we get back 'processed' (or not) and optionally some
+           // statistics about the regions we touched.
++
++          //Yuanguo: if there is both 'put' and 'del' in the checkAndMutate, and suppose
++          //         response.getProcessed() is true, then: results = 
++          //                { 
++          //                   [0]=ProtobufUtil.EMPTY_RESULT_EXISTS_TRUE;     //It is supposed to be the result for 'put';
++          //                   [1]=ProtobufUtil.EMPTY_RESULT_EXISTS_TRUE;     //It is supposed to be the result for 'del';
++          //                }
+           responseValue = response.getProcessed() ?
+                           ProtobufUtil.EMPTY_RESULT_EXISTS_TRUE :
+                           ProtobufUtil.EMPTY_RESULT_EXISTS_FALSE;
+@@ -149,7 +159,137 @@
+     return results;
+   }
+ 
++
+   /**
++   * Get the results from a protocol buffer MultiAndGetRowResponse
++   *
++   * @param request the protocol buffer MultiAndGetRowResponse to convert
++   * @param cells Cells to go with the passed in <code>proto</code>.  Can be null.
++   * @return the results that were in the MultiAndGetRowResponse (a Result or an Exception).
++   * @throws IOException
++   */
++  public static org.apache.hadoop.hbase.client.MultiResponse getResults(final MultiAndGetRowRequest request,
++      final MultiAndGetRowResponse response, final CellScanner cells) throws IOException
++  {
++    LOG.info("Yuanguo: Enter ResponseConverter::getResults()");
++
++    int requestRegionActionCount = request.getRegionActionCount();
++    int responseRegionActionResultCount = response.getRegionActionResultCount();
++    if (requestRegionActionCount != responseRegionActionResultCount)
++    {
++      throw new IllegalStateException("Request mutation count=" + requestRegionActionCount +
++          " does not match response mutation result count=" + responseRegionActionResultCount);
++    }
++
++    org.apache.hadoop.hbase.client.MultiResponse results = 
++             new org.apache.hadoop.hbase.client.MultiResponse();
++
++
++    for (int i = 0; i < responseRegionActionResultCount; i++)
++    {
++      RegionAction actions = request.getRegionAction(i);
++      RegionActionResult actionResult = response.getRegionActionResult(i);
++      HBaseProtos.RegionSpecifier rs = actions.getRegion();
++      if (rs.hasType() && (rs.getType() != HBaseProtos.RegionSpecifier.RegionSpecifierType.REGION_NAME))
++      {
++        throw new IllegalArgumentException("We support only encoded types for protobuf multiAndGetRow response.");
++      }
++
++      byte[] regionName = rs.getValue().toByteArray();
++
++      if (actionResult.hasException())
++      {
++        Throwable regionException =  ProtobufUtil.toException(actionResult.getException());
++        results.addException(regionName, regionException);
++        continue;
++      }
++
++      if (actions.getActionCount() != actionResult.getResultOrExceptionCount())
++      {
++        throw new IllegalStateException("actions.getActionCount=" + actions.getActionCount() +
++                                        ", actionResult.getResultOrExceptionCount=" +
++                                        actionResult.getResultOrExceptionCount() + " for region " + 
++                                        actions.getRegion());
++      }
++
++      for (ResultOrException roe : actionResult.getResultOrExceptionList())
++      {
++        Object responseValue;
++        if (roe.hasException())
++        {
++          responseValue = ProtobufUtil.toException(roe.getException());
++          LOG.info("Yuanguo: ResponseConverter::getResults()  hasException : " + responseValue.toString());
++        }
++        else if (roe.hasResult())
++        {
++          responseValue = ProtobufUtil.toResult(roe.getResult(), cells);
++          LOG.info("Yuanguo: ResponseConverter::getResults()  hasResult : " + responseValue.toString());
++        }
++        else if (roe.hasServiceResult())
++        {
++          responseValue = roe.getServiceResult();
++          LOG.info("Yuanguo: ResponseConverter::getResults()  hasServiceResult : " + responseValue.toString());
++        }
++        else
++        {
++          org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Result protoResult = response.getResult();
++          Result clientResult = ProtobufUtil.toResult(protoResult);
++
++          LOG.info("Yuanguo: ResponseConverter::getResults()  protoResult : " + protoResult);
++          LOG.info("Yuanguo: ResponseConverter::getResults()  clientResult : " + clientResult);
++
++          ////Yuanguo: LOG
++          if(true)
++          {
++            Cell[] theCells = clientResult.rawCells();
++            for(Cell c:theCells)
++            {
++              LOG.info("Yuanguo: "                            + 
++                  new String(CellUtil.cloneRow(c))+"\t"        +
++                  new String(CellUtil.cloneFamily(c))+":"      +
++                  new String(CellUtil.cloneQualifier(c))+"\t"  +
++                  new String(CellUtil.cloneValue(c))+"\t"      +
++                  c.getTimestamp());
++            }
++          }
++          ////Yuanguo: LOG
++
++          //Yuanguo: use the 'exists' member of Result to pass "processed".
++          //         if there is both 'put' and 'del' in the checkAndMutateAndGetRow,  then: results = 
++          //                [ 
++          //                   [0]=Result:[processed, original-row];     //It is supposed to be the result for 'put';
++          //                   [1]=Result:[processed, original-row];     //It is supposed to be the result for 'del';
++          //                ]
++          if (response.getProcessed())
++          {
++            clientResult.setExists(new Boolean(true));
++          }
++          else
++          {
++            clientResult.setExists(new Boolean(false));
++          }
++
++          responseValue = clientResult; 
++        }
++        results.add(regionName, roe.getIndex(), responseValue);
++      }
++    }
++
++    if (response.hasRegionStatistics())
++    {
++      ClientProtos.MultiRegionLoadStats stats = response.getRegionStatistics();
++      for (int i = 0; i < stats.getRegionCount(); i++)
++      {
++        results.addStatistic(stats.getRegion(i).getValue().toByteArray(), stats.getStat(i));
++      }
++    }
++ 
++    LOG.info("Yuanguo: Exit ResponseConverter::getResults()");
++
++    return results;
++  }
++
++  /**
+    * Wrap a throwable to an action result.
+    *
+    * @param t
+Index: hbase-client/src/main/java/org/apache/hadoop/hbase/client/HTablePool.java
+===================================================================
+--- hbase-client/src/main/java/org/apache/hadoop/hbase/client/HTablePool.java	(revision 695)
++++ hbase-client/src/main/java/org/apache/hadoop/hbase/client/HTablePool.java	(revision 704)
+@@ -23,6 +23,7 @@
+ import java.util.Collection;
+ import java.util.List;
+ import java.util.Map;
++import org.apache.hadoop.hbase.util.Pair;
+ 
+ import org.apache.hadoop.hbase.classification.InterfaceAudience;
+ import org.apache.hadoop.conf.Configuration;
+@@ -670,6 +671,15 @@
+       return table.checkAndMutate(row, family, qualifier, compareOp, value, mutation);
+     }
+ 
++
++    @Override
++    public Pair<Boolean, Result> checkAndMutateAndGetRow(byte[] row, byte[] family, byte[] qualifier, CompareOp compareOp,
++        byte[] value, RowMutations mutation) throws IOException {
++      checkState();
++      return table.checkAndMutateAndGetRow(row, family, qualifier, compareOp, value, mutation);
++    }
++
++
+     @Override public void setOperationTimeout(int operationTimeout) {
+       table.setOperationTimeout(operationTimeout);
+     }
+Index: hbase-client/src/main/java/org/apache/hadoop/hbase/client/HTable.java
+===================================================================
+--- hbase-client/src/main/java/org/apache/hadoop/hbase/client/HTable.java	(revision 695)
++++ hbase-client/src/main/java/org/apache/hadoop/hbase/client/HTable.java	(revision 704)
+@@ -63,6 +63,7 @@
+ import org.apache.hadoop.hbase.protobuf.ResponseConverter;
+ import org.apache.hadoop.hbase.protobuf.generated.ClientProtos;
+ import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MultiRequest;
++import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MultiAndGetRowRequest;
+ import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutateRequest;
+ import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutateResponse;
+ import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.RegionAction;
+@@ -1391,10 +1392,113 @@
+     return ((Result)results[0]).getExists();
+   }
+ 
++
+   /**
+    * {@inheritDoc}
+    */
+   @Override
++  public Pair<Boolean, Result> checkAndMutateAndGetRow(final byte [] row, final byte [] family, final byte [] qualifier,
++    final CompareOp compareOp, final byte [] value, final RowMutations rm) throws IOException
++  {
++    final RetryingTimeTracker tracker = new RetryingTimeTracker().start();
++
++    PayloadCarryingServerCallable<MultiResponse> callable =
++      new PayloadCarryingServerCallable<MultiResponse>(connection, getName(), rm.getRow(), rpcControllerFactory)
++      {
++        @Override
++        public MultiResponse call(int callTimeout) throws IOException
++        {
++          controller.setPriority(tableName);
++          int remainingTime = tracker.getRemainingTime(callTimeout);
++          if (remainingTime == 0)
++          {
++            throw new DoNotRetryIOException("Timeout for checkAndMutateAndGetRow");
++          }
++          controller.setCallTimeout(remainingTime);
++
++          try
++          {
++            CompareType compareType = CompareType.valueOf(compareOp.name());
++            MultiAndGetRowRequest request = RequestConverter.buildMutateRequestAndGetRow(
++                       getLocation().getRegionInfo().getRegionName(), 
++                       row, family, qualifier, new BinaryComparator(value), compareType, 
++                       rm);
++
++            ClientProtos.MultiAndGetRowResponse response = getStub().multiAndGetRow(controller, request);
++            ClientProtos.RegionActionResult res = response.getRegionActionResultList().get(0);
++
++            if (res.hasException())
++            {
++              Throwable ex = ProtobufUtil.toException(res.getException());
++              if(ex instanceof IOException)
++              {
++                throw (IOException)ex;
++              }
++              throw new IOException("Failed to checkAndMutateAndGetRow: "+ Bytes.toStringBinary(rm.getRow()), ex);
++            }
++
++            // Yuanguo: We have only one RegionAction (which has multiple Actions) in request. So, 
++            // the retResponse will be:
++            //         RegionName ==> RegionResult 
++            //                        [
++            //                          [0]=Result:[processed, original-row];     //It is supposed to be the result for 'put';
++            //                          [1]=Result:[processed, original-row];     //It is supposed to be the result for 'del';
++            //                        ]
++            // See function:
++            //          getResults(final MultiAndGetRowRequest request, final MultiAndGetRowResponse response, final CellScanner cells)
++            // in file:
++            //          protobuf/ResponseConverter.java
++            MultiResponse retResponse = ResponseConverter.getResults(request, response, controller.cellScanner());
++
++            return retResponse;
++          }
++          catch (ServiceException se)
++          {
++            throw ProtobufUtil.getRemoteException(se);
++          }
++        }
++      };
++
++    Object[] results = new Object[rm.getMutations().size()];
++
++    AsyncRequestFuture ars = multiAp.submitAll(pool, 
++                                               tableName, 
++                                               rm.getMutations(),
++                                               null, 
++                                               results, 
++                                               callable, 
++                                               operationTimeout, 
++                                               rpcTimeout);
++
++    ars.waitUntilDone();
++
++    if (ars.hasError()) {
++      throw ars.getErrors();
++    }
++ 
++
++    // Yuanguo: results[0] is used to pass 'processed' and 'original-row'; See 
++    // function:
++    //          getResults(final MultiAndGetRowRequest request, final MultiAndGetRowResponse response, final CellScanner cells)
++    // in file:
++    //          protobuf/ResponseConverter.java
++    Boolean processed = ((Result)results[0]).getExists();
++    Result  result = (Result)results[0];
++
++    LOG.info("Yuanguo: HTable::checkAndMutateAndGetRow() processed=" + processed);
++    LOG.info("Yuanguo: HTable::checkAndMutateAndGetRow() result=" + result);
++
++    Pair<Boolean, Result> ret = new Pair<Boolean, Result>();
++    ret.setFirst(processed);
++    ret.setSecond(result);
++
++    return ret;
++  }
++
++  /**
++   * {@inheritDoc}
++   */
++  @Override
+   public boolean exists(final Get get) throws IOException {
+     Result r = get(get, true);
+     assert r.getExists() != null;
+Index: hbase-client/src/main/java/org/apache/hadoop/hbase/client/Table.java
+===================================================================
+--- hbase-client/src/main/java/org/apache/hadoop/hbase/client/Table.java	(revision 695)
++++ hbase-client/src/main/java/org/apache/hadoop/hbase/client/Table.java	(revision 704)
+@@ -23,6 +23,8 @@
+ import java.util.List;
+ import java.util.Map;
+ 
++import org.apache.hadoop.hbase.util.Pair;
++
+ import com.google.protobuf.Descriptors;
+ import com.google.protobuf.Message;
+ import com.google.protobuf.Service;
+@@ -596,7 +598,23 @@
+   boolean checkAndMutate(byte[] row, byte[] family, byte[] qualifier,
+       CompareFilter.CompareOp compareOp, byte[] value, RowMutations mutation) throws IOException;
+ 
++
+   /**
++   * Same as checkAndMutate, but return the original row;
++   * 
++   * @param row to check
++   * @param family column family to check
++   * @param qualifier column qualifier to check
++   * @param compareOp the comparison operator
++   * @param value the expected value
++   * @param mutation  mutations to perform if check succeeds
++   * @throws IOException e
++   * @return true if the new put was executed, false otherwise
++   */
++  Pair<Boolean, Result> checkAndMutateAndGetRow(byte[] row, byte[] family, byte[] qualifier,
++      CompareFilter.CompareOp compareOp, byte[] value, RowMutations mutation) throws IOException;
++
++  /**
+    * Set timeout (millisecond) of each operation in this Table instance, will override the value
+    * of hbase.client.operation.timeout in configuration.
+    * Operation timeout is a top-level restriction that makes sure a blocking method will not be
+Index: hbase-client/src/main/java/org/apache/hadoop/hbase/client/AsyncProcess.java
+===================================================================
+--- hbase-client/src/main/java/org/apache/hadoop/hbase/client/AsyncProcess.java	(revision 695)
++++ hbase-client/src/main/java/org/apache/hadoop/hbase/client/AsyncProcess.java	(revision 704)
+@@ -849,9 +849,15 @@
+       this.actionsInProgress.set(actions.size());
+       if (results != null) {
+         assert needResults;
++
++        /* Yuanguo: for client/HTable.java : checkAndMutateAndGetRow, we allocate 2 more slots.
++         * So we remove this check;
++         *
+         if (results.length != actions.size()) {
+           throw new AssertionError("results.length");
+         }
++        */
++
+         this.results = results;
+         for (int i = 0; i != this.results.length; ++i) {
+           results[i] = null;
+@@ -932,6 +938,7 @@
+       Map<ServerName, MultiAction<Row>> actionsByServer =
+           new HashMap<ServerName, MultiAction<Row>>();
+ 
++      LOG.info("Yuanguo: AsyncProcess::groupAndSendMultiAction, numAttempt=" + numAttempt);
+       boolean isReplica = false;
+       List<Action<Row>> unknownReplicaActions = null;
+       for (Action<Row> action : currentActions) {
+@@ -1341,6 +1348,8 @@
+         byte[] regionName = regionEntry.getKey();
+         Map<Integer, Object> regionResults = results.get(regionName) == null
+             ?  null : results.get(regionName).result;
++        LOG.info("Yuanguo: regionName="+new String(regionName));
++        LOG.info("Yuanguo: regionResults="+regionResults);
+         if (regionResults == null) {
+           if (!responses.getExceptions().containsKey(regionName)) {
+             LOG.error("Server sent us neither results nor exceptions for "
+@@ -1501,6 +1510,7 @@
+          return; // Simple case, no replica requests.
+       } else if ((state = trySetResultSimple(
+           index, action.getAction(), false, result, null, isStale)) == null) {
++        LOG.info("Yuanguo: AsyncProcess::setResult()");
+         return; // Simple case, no replica requests.
+       }
+       assert state != null;
+@@ -1785,6 +1795,7 @@
+         operationTimeout, rpcTimeout);
+   }
+ 
++
+   /**
+    * Create a caller. Isolated to be easily overridden in the tests.
+    */

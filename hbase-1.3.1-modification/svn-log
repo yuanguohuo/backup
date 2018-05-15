@@ -1,0 +1,49 @@
+------------------------------------------------------------------------
+r1162 | huoyuanguo | 2018-04-27 02:52:00 +0000 (Fri, 27 Apr 2018) | 1 line
+
+解决在mvn 3.5.2 上的编译问题：add scope compile for jasper
+------------------------------------------------------------------------
+r784 | huoyuanguo | 2017-06-27 06:49:57 +0000 (Tue, 27 Jun 2017) | 1 line
+
+add DnionConfig
+------------------------------------------------------------------------
+r709 | huoyuanguo | 2017-06-08 10:23:50 +0000 (Thu, 08 Jun 2017) | 1 line
+
+support checkAndMutateAndGetRow in thrift server
+------------------------------------------------------------------------
+r705 | huoyuanguo | 2017-06-05 07:56:40 +0000 (Mon, 05 Jun 2017) | 1 line
+
+add some test case for 1. new comparing rule about null/empty;  2. checkAndMutateAndGetRow operation
+------------------------------------------------------------------------
+r704 | huoyuanguo | 2017-06-05 07:54:59 +0000 (Mon, 05 Jun 2017) | 1 line
+
+add interface checkAndMutateAndGetRow at client side, and implement it in server side. Also, protocol buffer is extended to support this operation
+------------------------------------------------------------------------
+r695 | huoyuanguo | 2017-05-31 01:50:03 +0000 (Wed, 31 May 2017) | 21 lines
+
+null/empty <  null/empty      false
+null/empty <= null/empty      true
+null/empty == null/empty      true
+null/empty != null/empty      false
+null/empty >= null/empty      true
+null/empty >  null/empty      false
+
+"AnyString" <  null/empty      false
+"AnyString" <= null/empty      false
+"AnyString" == null/empty      false
+"AnyString" != null/empty      true
+"AnyString" >= null/empty      true
+"AnyString" >  null/empty      true
+
+null/empty <  "AnyString"     true
+null/empty <= "AnyString"     true
+null/empty == "AnyString"     false
+null/empty != "AnyString"     true
+null/empty >= "AnyString"     false
+null/empty >  "AnyString"     false
+
+------------------------------------------------------------------------
+r694 | huoyuanguo | 2017-05-31 01:44:12 +0000 (Wed, 31 May 2017) | 1 line
+
+add hbase-1.3.1: official version without any changes
+------------------------------------------------------------------------

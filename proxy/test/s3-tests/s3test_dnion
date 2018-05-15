@@ -1,0 +1,10 @@
+#!/usr/bin/bash
+LOG=$1
+if [[ -z "$LOG" ]] ; then
+    LOG=log_dnion
+    S3TEST_CONF=ds3.conf ./virtualenv/bin/nosetests -a dstor --with-profile --with-html --html-report=results.html 2>&1 |tee $LOG 
+else
+    S3TEST_CONF=ds3.conf ./virtualenv/bin/nosetests -a dstor --with-profile --with-html --html-report=results.html  
+fi
+#S3TEST_CONF=ds3.conf ./virtualenv/bin/nosetests 2>&1 |tee $LOG
+
